@@ -48,6 +48,7 @@
   </style>
 </head>
 <body>
+
 <div id="loginView" class="login">
   <div class="loginbox">
     <div class="logo">🐱🐢</div>
@@ -123,10 +124,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-/* ====== 之後只要改這兩行 ====== */
 const SUPABASE_URL = 'https://bsupyiycowcpythupcdd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_a2mc6zGzpXDV7fM3V2Gs5Q_NlUclBnk';
-/* ============================ */
 
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -142,15 +141,29 @@ const FOOD_CATS = ['早餐','午餐','晚餐','點心','飲料'];
 
 let session=null, profile=null, household=null, householdId=null;
 let transactions=[], budgets=[], assets=[], debts=[], debtPayments=[];
-let currentPage='home', currentStatsRange='month', chart=null, channels=[];
+let currentPage='home', currentStatsRange='month', currentMonth='', chart=null, channels=[];
 
 const $ = s => document.querySelector(s);
 const fmt = n => Number(n||0).toLocaleString('zh-TW',{maximumFractionDigits:2});
 const iso = d => new Date(d).toISOString().slice(0,10);
 const today = () => iso(new Date());
 const ym = d => String(d||today()).slice(0,7);
+currentMonth = ym(today());
+
 const esc = s => String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const errText = e => e?.message || String(e || '發生錯誤');
+
+function monthLabel(m){
+  const [y,mo]=m.split('-');
+  return `${y} 年 ${Number(mo)} 月`;
+}
+
+function changeMonth(offset){
+  const [y,m]=currentMonth.split('-').map(Number);
+  const d=new Date(y,m-1+offset,1);
+  currentMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  renderAll();
+}
 
 function show(id){['loginView','setupView','appView'].forEach(x=>$('#'+x).classList.add('hidden'));$('#'+id).classList.remove('hidden')}
 function notice(text,ok=false){$('#loginNotice').innerHTML=`<div class="notice ${ok?'ok':''}">${esc(text)}</div>`}
@@ -165,50 +178,79 @@ async function signIn(){
   if(error) return notice('登入失敗：'+errText(error));
   session=data.session; await bootstrap();
 }
+
 async function signOut(){await sb.auth.signOut();location.reload()}
 
 async function bootstrap(){
   const {data:{session:s}}=await sb.auth.getSession(); session=s;
   if(!session) return show('loginView');
+
   const uid=session.user.id;
   const {data:p,error:pe}=await sb.from('profiles').select('*').eq('id',uid).maybeSingle();
   if(pe) console.warn(pe);
   profile=p||null;
+
   if(!profile){
-    show('setupView'); $('#setupStepProfile').classList.remove('hidden');$('#setupStepHousehold').classList.add('hidden'); return;
+    show('setupView');
+    $('#setupStepProfile').classList.remove('hidden');
+    $('#setupStepHousehold').classList.add('hidden');
+    return;
   }
+
   const {data:hm}=await sb.from('household_members').select('household_id').eq('user_id',uid).maybeSingle();
+
   if(!hm){
-    show('setupView');$('#setupStepProfile').classList.add('hidden');$('#setupStepHousehold').classList.remove('hidden');return;
+    show('setupView');
+    $('#setupStepProfile').classList.add('hidden');
+    $('#setupStepHousehold').classList.remove('hidden');
+    return;
   }
+
   householdId=hm.household_id;
   const {data:h}=await sb.from('households').select('*').eq('id',householdId).single();
   household=h;
-  show('appView');$('#whoText').textContent=profile.display_name+' 已登入';
-  await loadAll(); subscribeRealtime(); renderAll();
+
+  show('appView');
+  $('#whoText').textContent=profile.display_name+' 已登入';
+
+  await loadAll();
+  subscribeRealtime();
+  renderAll();
 }
+
 async function saveProfile(name){
   const {error}=await sb.from('profiles').insert({id:session.user.id,display_name:name});
   if(error) return alert(errText(error));
+
   profile={id:session.user.id,display_name:name};
-  $('#setupStepProfile').classList.add('hidden');$('#setupStepHousehold').classList.remove('hidden');
+  $('#setupStepProfile').classList.add('hidden');
+  $('#setupStepHousehold').classList.remove('hidden');
 }
+
 async function createHousehold(){
   const {data,error}=await sb.rpc('create_household',{p_name:'姐姐＆揍揍'});
   if(error)return alert(errText(error));
-  $('#setupStepHousehold').classList.add('hidden');$('#setupCodeBox').classList.remove('hidden');$('#createdCode').textContent=data;
+
+  $('#setupStepHousehold').classList.add('hidden');
+  $('#setupCodeBox').classList.remove('hidden');
+  $('#createdCode').textContent=data;
 }
+
 async function joinHousehold(){
   const code=$('#joinCodeInput').value.trim().toUpperCase();
   if(code.length!==6)return alert('請輸入 6 碼邀請碼');
+
   const {error}=await sb.rpc('join_household_by_code',{p_code:code});
   if(error)return alert(errText(error));
+
   await finishSetup();
 }
+
 async function finishSetup(){await bootstrap()}
 
 async function loadAll(){
   $('#syncText').textContent='同步中…';
+
   const [t,b,a,d,p]=await Promise.all([
     sb.from('transactions').select('*').eq('household_id',householdId).order('date',{ascending:false}).order('created_at',{ascending:false}),
     sb.from('budgets').select('*').eq('household_id',householdId),
@@ -216,171 +258,595 @@ async function loadAll(){
     sb.from('debts').select('*').eq('household_id',householdId).order('created_at',{ascending:false}),
     sb.from('debt_payments').select('*').eq('household_id',householdId).order('due_date')
   ]);
-  transactions=t.data||[];budgets=b.data||[];assets=a.data||[];debts=d.data||[];debtPayments=p.data||[];
+
+  transactions=t.data||[];
+  budgets=b.data||[];
+  assets=a.data||[];
+  debts=d.data||[];
+  debtPayments=p.data||[];
+
   $('#syncText').textContent='已同步';
 }
+
 function subscribeRealtime(){
-  channels.forEach(c=>sb.removeChannel(c));channels=[];
+  channels.forEach(c=>sb.removeChannel(c));
+  channels=[];
+
   ['transactions','budgets','assets','debts','debt_payments'].forEach(table=>{
-    const c=sb.channel('rt-'+table).on('postgres_changes',{event:'*',schema:'public',table,filter:`household_id=eq.${householdId}`},async()=>{await loadAll();renderAll()}).subscribe();
+    const c=sb.channel('rt-'+table)
+      .on('postgres_changes',{
+        event:'*',
+        schema:'public',
+        table,
+        filter:`household_id=eq.${householdId}`
+      },async()=>{
+        await loadAll();
+        renderAll();
+      })
+      .subscribe();
+
     channels.push(c);
   });
 }
-function renderAll(){renderHome();renderRecord();renderBudget();renderAssets();renderDebts();renderStats()}
+
+function renderAll(){
+  renderHome();
+  renderRecord();
+  renderBudget();
+  renderAssets();
+  renderDebts();
+  renderStats();
+}
 
 function renderHome(){
-  const m=ym(today());
+  const m=currentMonth;
   const tx=transactions.filter(x=>ym(x.date)===m);
   const income=tx.filter(x=>x.kind==='income').reduce((s,x)=>s+Number(x.amount),0);
   const expense=tx.filter(x=>x.kind==='expense').reduce((s,x)=>s+Number(x.amount),0);
   const assetTotal=assets.reduce((s,x)=>s+Number(x.balance),0);
   const debtRemain=debtPayments.filter(x=>!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);
   const monthDebt=debtPayments.filter(x=>ym(x.due_date)===m&&!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);
-  const recent=transactions.slice(0,7).map(txItem).join('')||'<div class="muted center">還沒有記帳資料</div>';
+  const recent=tx.slice(0,7).map(txItem).join('')||'<div class="muted center">這個月還沒有記帳資料</div>';
+
   $('#page-home').innerHTML=`
-    <div class="card hero"><h2>這個月的小日子 ♡</h2><div class="big">$${fmt(income-expense)}</div><div class="muted">收入扣掉支出後的本月差額</div></div>
+    <div class="card" style="padding:10px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <button class="btn secondary" onclick="changeMonth(-1)">〈</button>
+        <div style="font-weight:800;color:var(--brown);font-size:17px">${monthLabel(m)}</div>
+        <button class="btn secondary" onclick="changeMonth(1)">〉</button>
+      </div>
+    </div>
+
+    <div class="card hero">
+      <h2>${monthLabel(m)}的小日子 ♡</h2>
+      <div class="big">$${fmt(income-expense)}</div>
+      <div class="muted">收入扣掉支出後的當月差額</div>
+    </div>
+
     <div class="grid2">
-      <div class="mini">本月收入<b class="income">$${fmt(income)}</b></div>
-      <div class="mini">本月支出<b class="expense">$${fmt(expense)}</b></div>
+      <div class="mini">當月收入<b class="income">$${fmt(income)}</b></div>
+      <div class="mini">當月支出<b class="expense">$${fmt(expense)}</b></div>
       <div class="mini">目前資產<b>$${fmt(assetTotal)}</b></div>
       <div class="mini">剩餘負債<b>$${fmt(debtRemain)}</b></div>
     </div>
+
     <div style="height:10px"></div>
-    <div class="card"><div class="section-title"><h3>本月分期應繳</h3><span class="pill">${m}</span></div><div style="font-size:26px;font-weight:800;color:var(--brown)">$${fmt(monthDebt)}</div></div>
-    <div class="section-title"><h3>最近記帳</h3><button class="btn secondary" onclick="goPage('record')">＋新增</button></div>
+
+    <div class="card">
+      <div class="section-title">
+        <h3>當月分期應繳</h3>
+        <span class="pill">${m}</span>
+      </div>
+      <div style="font-size:26px;font-weight:800;color:var(--brown)">$${fmt(monthDebt)}</div>
+    </div>
+
+    <div class="section-title">
+      <h3>${monthLabel(m)}記帳</h3>
+      <button class="btn secondary" onclick="goPage('record')">＋新增</button>
+    </div>
+
     <div class="list">${recent}</div>
-    <div style="height:10px"></div><button class="btn secondary" style="width:100%" onclick="signOut()">登出</button>`;
+
+    <div style="height:10px"></div>
+    <button class="btn secondary" style="width:100%" onclick="signOut()">登出</button>`;
 }
+
 function txItem(x){
   return `<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(x.category)} ${x.note?`・${esc(x.note)}`:''}</div><div class="item-sub">${esc(x.date)} ・ ${esc(x.payment_method||'收入')} ・ ${esc(x.paid_by||'')}</div></div><div class="amount ${x.kind}">${x.kind==='income'?'+':'-'}$${fmt(x.amount)}</div><button class="x" onclick="deleteTx('${x.id}')">×</button></div>`;
 }
+
 function renderRecord(){
   $('#page-record').innerHTML=`
     <div class="section-title"><h3>記一筆</h3></div>
+
     <div class="card">
-      <div class="seg"><button id="segExpense" class="on" onclick="setKind('expense')">支出</button><button id="segIncome" onclick="setKind('income')">收入</button></div>
+      <div class="seg">
+        <button id="segExpense" class="on" onclick="setKind('expense')">支出</button>
+        <button id="segIncome" onclick="setKind('income')">收入</button>
+      </div>
+
       <div class="stack" style="margin-top:12px">
-        <div class="label">日期</div><input id="txDate" type="date" value="${today()}">
-        <div class="label">金額</div><input id="txAmount" type="number" min="0" step="0.01" placeholder="0">
-        <div class="label">分類</div><select id="txCategory">${EXPENSE_CATS.map(x=>`<option>${x}</option>`).join('')}</select>
-        <div id="paymentWrap"><div class="label">付款方式</div><select id="txPayment">${PAYMENT_METHODS.map(x=>`<option>${x}</option>`).join('')}</select></div>
-        <div id="paidByWrap"><div class="label">誰付款</div><select id="txPaidBy"><option>姐姐</option><option>揍揍</option><option>共同</option></select></div>
-        <div class="label">備註</div><textarea id="txNote" placeholder="例如：晚餐、貓砂、加油…"></textarea>
+        <div class="label">日期</div>
+        <input id="txDate" type="date" value="${today()}">
+
+        <div class="label">金額</div>
+        <input id="txAmount" type="number" min="0" step="0.01" placeholder="0">
+
+        <div class="label">分類</div>
+        <select id="txCategory">${EXPENSE_CATS.map(x=>`<option>${x}</option>`).join('')}</select>
+
+        <div id="paymentWrap">
+          <div class="label">付款方式</div>
+          <select id="txPayment">${PAYMENT_METHODS.map(x=>`<option>${x}</option>`).join('')}</select>
+        </div>
+
+        <div id="paidByWrap">
+          <div class="label">誰付款</div>
+          <select id="txPaidBy">
+            <option>姐姐</option>
+            <option>揍揍</option>
+            <option>共同</option>
+          </select>
+        </div>
+
+        <div class="label">備註</div>
+        <textarea id="txNote" placeholder="例如：晚餐、貓砂、加油…"></textarea>
+
         <button class="btn pink" onclick="addTransaction()">儲存這一筆</button>
       </div>
     </div>
-    <div class="section-title"><h3>最近紀錄</h3></div><div class="list">${transactions.slice(0,30).map(txItem).join('')||'<div class="muted center">還沒有資料</div>'}</div>`;
+
+    <div class="section-title"><h3>最近紀錄</h3></div>
+    <div class="list">${transactions.slice(0,30).map(txItem).join('')||'<div class="muted center">還沒有資料</div>'}</div>`;
+
   window._txKind='expense';
 }
+
 function setKind(kind){
-  window._txKind=kind;$('#segExpense').classList.toggle('on',kind==='expense');$('#segIncome').classList.toggle('on',kind==='income');
-  $('#txCategory').innerHTML=(kind==='expense'?EXPENSE_CATS:INCOME_CATS).map(x=>`<option>${x}</option>`).join('');
-  $('#paymentWrap').classList.toggle('hidden',kind==='income');$('#paidByWrap').classList.toggle('hidden',kind==='income');
+  window._txKind=kind;
+
+  $('#segExpense').classList.toggle('on',kind==='expense');
+  $('#segIncome').classList.toggle('on',kind==='income');
+
+  $('#txCategory').innerHTML=(kind==='expense'?EXPENSE_CATS:INCOME_CATS)
+    .map(x=>`<option>${x}</option>`).join('');
+
+  $('#paymentWrap').classList.toggle('hidden',kind==='income');
+  $('#paidByWrap').classList.toggle('hidden',kind==='income');
 }
+
 async function addTransaction(){
-  const amount=Number($('#txAmount').value);if(!amount)return alert('請輸入金額');
+  const amount=Number($('#txAmount').value);
+  if(!amount)return alert('請輸入金額');
+
   const kind=window._txKind||'expense';
-  const row={household_id:householdId,user_id:session.user.id,kind,date:$('#txDate').value,amount,category:$('#txCategory').value,note:$('#txNote').value.trim()};
-  if(kind==='expense'){row.payment_method=$('#txPayment').value;row.paid_by=$('#txPaidBy').value}
-  const {error}=await sb.from('transactions').insert(row);if(error)return alert(errText(error));
-  await loadAll();renderAll();alert('已記錄 ♡');
+
+  const row={
+    household_id:householdId,
+    user_id:session.user.id,
+    kind,
+    date:$('#txDate').value,
+    amount,
+    category:$('#txCategory').value,
+    note:$('#txNote').value.trim()
+  };
+
+  if(kind==='expense'){
+    row.payment_method=$('#txPayment').value;
+    row.paid_by=$('#txPaidBy').value;
+  }
+
+  const {error}=await sb.from('transactions').insert(row);
+  if(error)return alert(errText(error));
+
+  await loadAll();
+  renderAll();
+  alert('已記錄 ♡');
 }
-async function deleteTx(id){if(!confirm('要刪除這筆紀錄嗎？'))return;const {error}=await sb.from('transactions').delete().eq('id',id);if(error)alert(errText(error));else{await loadAll();renderAll()}}
+
+async function deleteTx(id){
+  if(!confirm('要刪除這筆紀錄嗎？'))return;
+
+  const {error}=await sb.from('transactions').delete().eq('id',id);
+
+  if(error)alert(errText(error));
+  else{
+    await loadAll();
+    renderAll();
+  }
+}
 
 function budgetSpent(cat,m){
   const tx=transactions.filter(x=>x.kind==='expense'&&ym(x.date)===m);
+
   if(cat==='伙食')return tx.filter(x=>FOOD_CATS.includes(x.category)).reduce((s,x)=>s+Number(x.amount),0);
   if(cat==='交通')return tx.filter(x=>x.category==='交通').reduce((s,x)=>s+Number(x.amount),0);
   if(cat==='存錢')return tx.filter(x=>x.category==='存錢').reduce((s,x)=>s+Number(x.amount),0);
+
   return 0;
 }
+
 function renderBudget(){
-  const m=ym(today());
+  const m=currentMonth;
+
   const cards=BUDGET_CATS.map(c=>{
-    const b=budgets.find(x=>x.month===m&&x.category===c);const limit=Number(b?.amount||0);const spent=budgetSpent(c,m);const pct=limit?Math.min(100,spent/limit*100):0;
-    return `<div class="card"><div class="section-title"><h3>${c}</h3><button class="btn secondary" onclick="editBudget('${c}','${m}',${limit})">設定</button></div><div><b>$${fmt(spent)}</b> / $${fmt(limit)}</div><div class="progress"><i style="width:${pct}%"></i></div><div class="muted" style="margin-top:7px">剩餘 $${fmt(Math.max(0,limit-spent))}</div></div>`
+    const b=budgets.find(x=>x.month===m&&x.category===c);
+    const limit=Number(b?.amount||0);
+    const spent=budgetSpent(c,m);
+    const pct=limit?Math.min(100,spent/limit*100):0;
+
+    return `<div class="card">
+      <div class="section-title">
+        <h3>${c}</h3>
+        <button class="btn secondary" onclick="editBudget('${c}','${m}',${limit})">設定</button>
+      </div>
+      <div><b>$${fmt(spent)}</b> / $${fmt(limit)}</div>
+      <div class="progress"><i style="width:${pct}%"></i></div>
+      <div class="muted" style="margin-top:7px">剩餘 $${fmt(Math.max(0,limit-spent))}</div>
+    </div>`;
   }).join('');
-  $('#page-budget').innerHTML=`<div class="section-title"><h3>${m} 每月預算</h3></div>${cards}<div class="muted center">交通、伙食、存錢會依你們的記帳分類自動累計；預備金可自行設定作為保留額度。</div>`;
+
+  $('#page-budget').innerHTML=`
+    <div class="section-title"><h3>${monthLabel(m)} 每月預算</h3></div>
+    ${cards}
+    <div class="muted center">交通、伙食、存錢會依你們的記帳分類自動累計；預備金可自行設定作為保留額度。</div>`;
 }
+
 function editBudget(cat,m,amount){
-  openModal(`<div class="sheet-head"><h3>設定 ${cat} 預算</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><input id="budgetAmount" type="number" min="0" value="${amount}"><button class="btn" onclick="saveBudget('${cat}','${m}')">儲存</button></div>`);
+  openModal(`
+    <div class="sheet-head">
+      <h3>設定 ${cat} 預算</h3>
+      <button class="x" onclick="closeModal()">×</button>
+    </div>
+    <div class="stack">
+      <input id="budgetAmount" type="number" min="0" value="${amount}">
+      <button class="btn" onclick="saveBudget('${cat}','${m}')">儲存</button>
+    </div>`);
 }
+
 async function saveBudget(cat,m){
   const amount=Number($('#budgetAmount').value||0);
-  const {error}=await sb.from('budgets').upsert({household_id:householdId,month:m,category:cat,amount},{onConflict:'household_id,month,category'});
-  if(error)return alert(errText(error));closeModal();await loadAll();renderAll();
+
+  const {error}=await sb.from('budgets').upsert({
+    household_id:householdId,
+    month:m,
+    category:cat,
+    amount
+  },{onConflict:'household_id,month,category'});
+
+  if(error)return alert(errText(error));
+
+  closeModal();
+  await loadAll();
+  renderAll();
 }
 
 function renderAssets(){
   const total=assets.reduce((s,x)=>s+Number(x.balance),0);
-  $('#page-assets').innerHTML=`<div class="card hero"><h2>我們的資產</h2><div class="big">$${fmt(total)}</div><div class="muted">可以記銀行、現金、共同存款、存錢筒…</div></div>
-  <div class="section-title"><h3>資產項目</h3><button class="btn pink" onclick="assetModal()">＋新增</button></div>
-  <div class="list">${assets.map(a=>`<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(a.name)}</div><div class="item-sub">${esc(a.note||'')}</div></div><div class="amount">$${fmt(a.balance)}</div><button class="x" onclick="deleteAsset('${a.id}')">×</button></div>`).join('')||'<div class="muted center">還沒有資產資料</div>'}</div>`;
+
+  $('#page-assets').innerHTML=`
+    <div class="card hero">
+      <h2>我們的資產</h2>
+      <div class="big">$${fmt(total)}</div>
+      <div class="muted">可以記銀行、現金、共同存款、存錢筒…</div>
+    </div>
+
+    <div class="section-title">
+      <h3>資產項目</h3>
+      <button class="btn pink" onclick="assetModal()">＋新增</button>
+    </div>
+
+    <div class="list">
+      ${assets.map(a=>`
+        <div class="item">
+          <span class="dot"></span>
+          <div class="item-main">
+            <div class="item-title">${esc(a.name)}</div>
+            <div class="item-sub">${esc(a.note||'')}</div>
+          </div>
+          <div class="amount">$${fmt(a.balance)}</div>
+          <button class="x" onclick="deleteAsset('${a.id}')">×</button>
+        </div>`).join('')||'<div class="muted center">還沒有資產資料</div>'}
+    </div>`;
 }
-function assetModal(){openModal(`<div class="sheet-head"><h3>新增資產</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><input id="assetName" placeholder="例如：共同存款"><input id="assetBalance" type="number" step="0.01" placeholder="目前金額"><textarea id="assetNote" placeholder="備註"></textarea><button class="btn pink" onclick="addAsset()">新增</button></div>`)}
-async function addAsset(){const name=$('#assetName').value.trim(),balance=Number($('#assetBalance').value||0);if(!name)return alert('請輸入名稱');const {error}=await sb.from('assets').insert({household_id:householdId,name,balance,note:$('#assetNote').value.trim()});if(error)return alert(errText(error));closeModal();await loadAll();renderAll()}
-async function deleteAsset(id){if(!confirm('刪除此資產？'))return;await sb.from('assets').delete().eq('id',id);await loadAll();renderAll()}
+
+function assetModal(){
+  openModal(`
+    <div class="sheet-head">
+      <h3>新增資產</h3>
+      <button class="x" onclick="closeModal()">×</button>
+    </div>
+    <div class="stack">
+      <input id="assetName" placeholder="例如：共同存款">
+      <input id="assetBalance" type="number" step="0.01" placeholder="目前金額">
+      <textarea id="assetNote" placeholder="備註"></textarea>
+      <button class="btn pink" onclick="addAsset()">新增</button>
+    </div>`);
+}
+
+async function addAsset(){
+  const name=$('#assetName').value.trim();
+  const balance=Number($('#assetBalance').value||0);
+
+  if(!name)return alert('請輸入名稱');
+
+  const {error}=await sb.from('assets').insert({
+    household_id:householdId,
+    name,
+    balance,
+    note:$('#assetNote').value.trim()
+  });
+
+  if(error)return alert(errText(error));
+
+  closeModal();
+  await loadAll();
+  renderAll();
+}
+
+async function deleteAsset(id){
+  if(!confirm('刪除此資產？'))return;
+
+  await sb.from('assets').delete().eq('id',id);
+  await loadAll();
+  renderAll();
+}
 
 function renderDebts(){
   const remain=debtPayments.filter(x=>!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);
-  const m=ym(today()), monthTotal=debtPayments.filter(x=>ym(x.due_date)===m&&!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);
+  const m=currentMonth;
+  const monthTotal=debtPayments.filter(x=>ym(x.due_date)===m&&!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);
   const months=[...new Set(debtPayments.map(x=>ym(x.due_date)))].sort();
+
   $('#page-debts').innerHTML=`
-    <div class="grid2"><div class="mini">剩餘分期<b>$${fmt(remain)}</b></div><div class="mini">本月應繳<b>$${fmt(monthTotal)}</b></div></div><div style="height:12px"></div>
-    <div class="section-title"><h3>還款計畫</h3><button class="btn pink" onclick="debtModal()">＋新增負債</button></div>
+    <div class="grid2">
+      <div class="mini">剩餘分期<b>$${fmt(remain)}</b></div>
+      <div class="mini">${monthLabel(m)}應繳<b>$${fmt(monthTotal)}</b></div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="section-title">
+      <h3>還款計畫</h3>
+      <button class="btn pink" onclick="debtModal()">＋新增負債</button>
+    </div>
+
     ${months.map(monthBlock).join('')||'<div class="muted center">還沒有分期資料</div>'}`;
 }
+
 function monthBlock(m){
-  const ps=debtPayments.filter(x=>ym(x.due_date)===m), total=ps.filter(x=>!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);
-  return `<div class="month-group"><div class="month-head"><span>${m}</span><span>$${fmt(total)}</span></div><div class="card" style="padding:8px 14px">${ps.map(p=>{const d=debts.find(x=>x.id===p.debt_id);return `<div class="payrow"><input class="check" type="checkbox" ${p.is_paid?'checked':''} onchange="togglePayment('${p.id}',this.checked)"><div class="item-main"><div class="item-title">${esc(d?.name||'負債')} <span class="pill">${p.installment_no}/${d?.installments||'?'}期</span></div><div class="item-sub">${p.due_date}</div></div><b>$${fmt(p.amount)}</b></div>`}).join('')}</div></div>`
+  const ps=debtPayments.filter(x=>ym(x.due_date)===m);
+  const total=ps.filter(x=>!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);
+
+  return `<div class="month-group">
+    <div class="month-head">
+      <span>${m}</span>
+      <span>$${fmt(total)}</span>
+    </div>
+
+    <div class="card" style="padding:8px 14px">
+      ${ps.map(p=>{
+        const d=debts.find(x=>x.id===p.debt_id);
+
+        return `<div class="payrow">
+          <input class="check" type="checkbox" ${p.is_paid?'checked':''} onchange="togglePayment('${p.id}',this.checked)">
+          <div class="item-main">
+            <div class="item-title">
+              ${esc(d?.name||'負債')}
+              <span class="pill">${p.installment_no}/${d?.installments||'?'}期</span>
+            </div>
+            <div class="item-sub">${p.due_date}</div>
+          </div>
+          <b>$${fmt(p.amount)}</b>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
 }
+
 function debtModal(){
-  openModal(`<div class="sheet-head"><h3>新增分期／負債</h3><button class="x" onclick="closeModal()">×</button></div>
-  <div class="stack"><input id="debtName" placeholder="帳務名稱，例如：手機、家電"><select id="debtSource"><option>姐姐的卡</option><option>揍揍（國泰信用卡）</option><option>揍揍（台新信用卡）</option><option>其他</option></select>
-  <input id="debtTotal" type="number" step="0.01" placeholder="分期總金額"><select id="debtInstallments">${Array.from({length:72},(_,i)=>`<option value="${i+1}">${i+1}期</option>`).join('')}</select>
-  <input id="debtPayment" type="number" step="0.01" placeholder="每期應繳金額"><div class="label">首次還款日</div><input id="debtFirst" type="date" value="${today()}"><textarea id="debtNote" placeholder="備註"></textarea><button class="btn pink" onclick="addDebt()">建立還款計畫</button></div>`);
+  openModal(`
+    <div class="sheet-head">
+      <h3>新增分期／負債</h3>
+      <button class="x" onclick="closeModal()">×</button>
+    </div>
+
+    <div class="stack">
+      <input id="debtName" placeholder="帳務名稱，例如：手機、家電">
+
+      <select id="debtSource">
+        <option>姐姐的卡</option>
+        <option>揍揍（國泰信用卡）</option>
+        <option>揍揍（台新信用卡）</option>
+        <option>其他</option>
+      </select>
+
+      <input id="debtTotal" type="number" step="0.01" placeholder="分期總金額">
+
+      <select id="debtInstallments">
+        ${Array.from({length:72},(_,i)=>`<option value="${i+1}">${i+1}期</option>`).join('')}
+      </select>
+
+      <input id="debtPayment" type="number" step="0.01" placeholder="每期應繳金額">
+
+      <div class="label">首次還款日</div>
+      <input id="debtFirst" type="date" value="${today()}">
+
+      <textarea id="debtNote" placeholder="備註"></textarea>
+
+      <button class="btn pink" onclick="addDebt()">建立還款計畫</button>
+    </div>`);
 }
+
 async function addDebt(){
-  const name=$('#debtName').value.trim(), total=Number($('#debtTotal').value), installments=Number($('#debtInstallments').value), payment=Number($('#debtPayment').value);
+  const name=$('#debtName').value.trim();
+  const total=Number($('#debtTotal').value);
+  const installments=Number($('#debtInstallments').value);
+  const payment=Number($('#debtPayment').value);
+
   if(!name||!total||!payment)return alert('請填完整名稱、總金額與每期金額');
-  const {error}=await sb.rpc('create_debt_with_schedule',{p_household_id:householdId,p_name:name,p_source:$('#debtSource').value,p_total_amount:total,p_installments:installments,p_payment_amount:payment,p_first_due_date:$('#debtFirst').value,p_note:$('#debtNote').value.trim()});
-  if(error)return alert(errText(error));closeModal();await loadAll();renderAll();
+
+  const {error}=await sb.rpc('create_debt_with_schedule',{
+    p_household_id:householdId,
+    p_name:name,
+    p_source:$('#debtSource').value,
+    p_total_amount:total,
+    p_installments:installments,
+    p_payment_amount:payment,
+    p_first_due_date:$('#debtFirst').value,
+    p_note:$('#debtNote').value.trim()
+  });
+
+  if(error)return alert(errText(error));
+
+  closeModal();
+  await loadAll();
+  renderAll();
 }
-async function togglePayment(id,checked){const {error}=await sb.from('debt_payments').update({is_paid:checked,paid_at:checked?new Date().toISOString():null}).eq('id',id);if(error)alert(errText(error));else{await loadAll();renderAll()}}
+
+async function togglePayment(id,checked){
+  const {error}=await sb.from('debt_payments')
+    .update({
+      is_paid:checked,
+      paid_at:checked?new Date().toISOString():null
+    })
+    .eq('id',id);
+
+  if(error)alert(errText(error));
+  else{
+    await loadAll();
+    renderAll();
+  }
+}
 
 function rangeTx(){
-  const now=new Date();let start,end=new Date(now);end.setHours(23,59,59,999);
-  if(currentStatsRange==='week'){start=new Date(now);start.setDate(now.getDate()-6);start.setHours(0,0,0,0)}
-  if(currentStatsRange==='month'){start=new Date(now.getFullYear(),now.getMonth(),1)}
-  if(currentStatsRange==='year'){start=new Date(now.getFullYear(),0,1)}
-  return transactions.filter(x=>{const d=new Date(x.date+'T12:00:00');return d>=start&&d<=end});
+  const now=new Date();
+  let start;
+  let end=new Date(now);
+
+  end.setHours(23,59,59,999);
+
+  if(currentStatsRange==='week'){
+    start=new Date(now);
+    start.setDate(now.getDate()-6);
+    start.setHours(0,0,0,0);
+  }
+
+  if(currentStatsRange==='month'){
+    const [y,m]=currentMonth.split('-').map(Number);
+    start=new Date(y,m-1,1);
+    end=new Date(y,m,0,23,59,59,999);
+  }
+
+  if(currentStatsRange==='year'){
+    const y=Number(currentMonth.slice(0,4));
+    start=new Date(y,0,1);
+    end=new Date(y,11,31,23,59,59,999);
+  }
+
+  return transactions.filter(x=>{
+    const d=new Date(x.date+'T12:00:00');
+    return d>=start&&d<=end;
+  });
 }
+
 function renderStats(){
-  const tx=rangeTx(), exp=tx.filter(x=>x.kind==='expense'), income=tx.filter(x=>x.kind==='income').reduce((s,x)=>s+Number(x.amount),0), expense=exp.reduce((s,x)=>s+Number(x.amount),0);
-  const payments=PAYMENT_METHODS.map(p=>[p,exp.filter(x=>x.payment_method===p).reduce((s,x)=>s+Number(x.amount),0)]);
+  const tx=rangeTx();
+  const exp=tx.filter(x=>x.kind==='expense');
+  const income=tx.filter(x=>x.kind==='income').reduce((s,x)=>s+Number(x.amount),0);
+  const expense=exp.reduce((s,x)=>s+Number(x.amount),0);
+
+  const payments=PAYMENT_METHODS.map(p=>[
+    p,
+    exp.filter(x=>x.payment_method===p).reduce((s,x)=>s+Number(x.amount),0)
+  ]);
+
   $('#page-stats').innerHTML=`
-    <div class="seg"><button class="${currentStatsRange==='week'?'on':''}" onclick="setStats('week')">最近 7 天</button><button class="${currentStatsRange==='month'?'on':''}" onclick="setStats('month')">本月</button><button class="${currentStatsRange==='year'?'on':''}" onclick="setStats('year')">今年</button></div>
-    <div style="height:12px"></div><div class="grid2"><div class="mini">收入<b class="income">$${fmt(income)}</b></div><div class="mini">支出<b class="expense">$${fmt(expense)}</b></div></div>
-    <div style="height:12px"></div><div class="card"><div class="section-title"><h3>8 種付款方式統計</h3></div><canvas id="payChart"></canvas></div>
-    <div class="list">${payments.map(([p,v])=>`<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(p)}</div></div><b>$${fmt(v)}</b></div>`).join('')}</div>`;
+    <div class="seg">
+      <button class="${currentStatsRange==='week'?'on':''}" onclick="setStats('week')">最近 7 天</button>
+      <button class="${currentStatsRange==='month'?'on':''}" onclick="setStats('month')">${monthLabel(currentMonth)}</button>
+      <button class="${currentStatsRange==='year'?'on':''}" onclick="setStats('year')">${currentMonth.slice(0,4)} 年</button>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="grid2">
+      <div class="mini">收入<b class="income">$${fmt(income)}</b></div>
+      <div class="mini">支出<b class="expense">$${fmt(expense)}</b></div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="card">
+      <div class="section-title"><h3>8 種付款方式統計</h3></div>
+      <canvas id="payChart"></canvas>
+    </div>
+
+    <div class="list">
+      ${payments.map(([p,v])=>`
+        <div class="item">
+          <span class="dot"></span>
+          <div class="item-main"><div class="item-title">${esc(p)}</div></div>
+          <b>$${fmt(v)}</b>
+        </div>`).join('')}
+    </div>`;
+
   setTimeout(()=>drawChart(payments),0);
 }
-function setStats(r){currentStatsRange=r;renderStats()}
+
+function setStats(r){
+  currentStatsRange=r;
+  renderStats();
+}
+
 function drawChart(arr){
-  const el=$('#payChart');if(!el)return;if(chart)chart.destroy();
-  chart=new Chart(el,{type:'bar',data:{labels:arr.map(x=>x[0].replace('揍揍（','').replace('）','').replace('姐姐的','姐-')),datasets:[{data:arr.map(x=>x[1]),borderWidth:1}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{ticks:{maxRotation:65,minRotation:45,font:{size:10}}}}}});
+  const el=$('#payChart');
+  if(!el)return;
+
+  if(chart)chart.destroy();
+
+  chart=new Chart(el,{
+    type:'bar',
+    data:{
+      labels:arr.map(x=>x[0].replace('揍揍（','').replace('）','').replace('姐姐的','姐-')),
+      datasets:[{
+        data:arr.map(x=>x[1]),
+        borderWidth:1
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{beginAtZero:true},
+        x:{ticks:{maxRotation:65,minRotation:45,font:{size:10}}}
+      }
+    }
+  });
 }
+
 function goPage(p){
-  currentPage=p;document.querySelectorAll('[id^=page-]').forEach(x=>x.classList.add('hidden'));$('#page-'+p).classList.remove('hidden');
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page===p));
+  currentPage=p;
+
+  document.querySelectorAll('[id^=page-]')
+    .forEach(x=>x.classList.add('hidden'));
+
+  $('#page-'+p).classList.remove('hidden');
+
+  document.querySelectorAll('.tab')
+    .forEach(x=>x.classList.toggle('active',x.dataset.page===p));
 }
-document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
+
+document.querySelectorAll('.tab')
+  .forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
 
 if(SUPABASE_URL.includes('PASTE_')||SUPABASE_KEY.includes('PASTE_')){
-  show('loginView');notice('網站程式已放好，但還需要把 Supabase URL 與 Publishable key 填進 index.html 才能登入。');
+  show('loginView');
+  notice('網站程式已放好，但還需要把 Supabase URL 與 Publishable key 填進 index.html 才能登入。');
 }else{
   bootstrap();
 }
 </script>
+
 </body>
 </html>
