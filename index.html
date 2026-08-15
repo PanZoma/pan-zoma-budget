@@ -28,13 +28,22 @@
   </style>
 </head>
 <body>
+
 <div id="loginView" class="login"><div class="loginbox"><div class="logo">🐱🐢</div><h1>姐姐＆揍揍的小帳本</h1><div class="center muted">一起記帳・一起存錢・一起幸福</div><div style="height:18px"></div><div id="loginNotice"></div><div class="stack"><input id="email" type="email" placeholder="Email" autocomplete="email"><input id="password" type="password" placeholder="密碼" autocomplete="current-password"><button class="btn" onclick="signIn()">登入</button><div class="muted center">這支裝置登入成功後會記住登入狀態，除非登出或瀏覽器資料被清除。</div></div></div></div>
+
 <div id="setupView" class="login hidden"><div class="loginbox"><div class="logo">💗</div><h1>第一次使用</h1><div id="setupStepProfile"><p class="muted center">先告訴我這個帳號是誰。</p><div class="stack"><button class="btn pink" onclick="saveProfile('姐姐')">我是姐姐</button><button class="btn" onclick="saveProfile('揍揍')">我是揍揍</button></div></div><div id="setupStepHousehold" class="hidden"><p class="muted center">建立你們的共同帳本，或輸入另一半給你的邀請碼。</p><div class="stack"><button class="btn pink" onclick="createHousehold()">建立「姐姐＆揍揍」共同帳本</button><div class="center muted">或</div><input id="joinCodeInput" placeholder="6 碼邀請碼" maxlength="6" style="text-transform:uppercase"><button class="btn secondary" onclick="joinHousehold()">加入共同帳本</button></div></div><div id="setupCodeBox" class="hidden"><div class="notice ok center">共同帳本建立成功！<br><br>邀請碼：<b id="createdCode" style="font-size:24px"></b><br><br>請把這 6 碼給另一半，另一個帳號登入後選「加入共同帳本」。</div><button class="btn" style="width:100%" onclick="finishSetup()">進入小帳本</button></div></div></div>
-<div id="appView" class="app hidden"><header class="top"><div class="toprow"><div><h1>姐姐＆揍揍的小帳本 ♡</h1><div class="sub"><span id="whoText"></span> ・ <span id="syncText">雲端同步中</span></div></div><button class="gear" onclick="settingsModal()">⚙️</button></div></header><main><section id="page-home"></section><section id="page-record" class="hidden"></section><section id="page-budget" class="hidden"></section><section id="page-assets" class="hidden"></section><section id="page-debts" class="hidden"></section><section id="page-stats" class="hidden"></section></main><nav class="tabs"><button class="tab active" data-page="home"><span class="ico">🏠</span>首頁</button><button class="tab" data-page="record"><span class="ico">✍🏻</span>記帳</button><button class="tab" data-page="budget"><span class="ico">🎯</span>預算</button><button class="tab" data-page="assets"><span class="ico">💰</span>資產</button><button class="tab" data-page="debts"><span class="ico">💳</span>負債</button><button class="tab" data-page="stats"><span class="ico">📊</span>統計</button></nav></div>
+
+<div id="appView" class="app hidden">
+  <header class="top"><div class="toprow"><div><h1>姐姐＆揍揍的小帳本 ♡</h1><div class="sub"><span id="whoText"></span> ・ <span id="syncText">雲端同步中</span></div></div><button class="gear" onclick="settingsModal()">⚙️</button></div></header>
+  <main><section id="page-home"></section><section id="page-record" class="hidden"></section><section id="page-budget" class="hidden"></section><section id="page-assets" class="hidden"></section><section id="page-debts" class="hidden"></section><section id="page-stats" class="hidden"></section></main>
+  <nav class="tabs"><button class="tab active" data-page="home"><span class="ico">🏠</span>首頁</button><button class="tab" data-page="record"><span class="ico">✍🏻</span>記帳</button><button class="tab" data-page="budget"><span class="ico">🎯</span>預算</button><button class="tab" data-page="assets"><span class="ico">💰</span>資產</button><button class="tab" data-page="debts"><span class="ico">💳</span>負債</button><button class="tab" data-page="stats"><span class="ico">📊</span>統計</button></nav>
+</div>
+
 <div id="modal" class="modal hidden"><div id="sheet" class="sheet"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
 <script>
 const SUPABASE_URL='https://bsupyiycowcpythupcdd.supabase.co';
 const SUPABASE_KEY='sb_publishable_a2mc6zGzpXDV7fM3V2Gs5Q_NlUclBnk';
@@ -44,8 +53,6 @@ const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoR
 const PAYMENT_METHODS=['姐姐的現金','姐姐的卡','揍揍（國泰信用卡）','揍揍（台新信用卡）','揍揍（郵局）','揍揍現金','姐姐轉帳','揍揍轉帳'];
 const INCOME_CATS=['姐姐的薪資','揍揍的薪資','獎金','其他'];
 const EXPENSE_CATS=['早餐','午餐','晚餐','點心','飲料','交通','購物','生活用品','生活費','寵物','娛樂','房租','水費','電費','醫療','社交','數位','貸款','保險','手機／網路','訂閱','服飾','美容','旅遊','禮物','家用','其他','存錢'];
-const BUDGET_CATS=['交通','伙食','存錢','預備金'];
-const FOOD_CATS=['早餐','午餐','晚餐','點心','飲料'];
 
 let session=null,profile=null,household=null,householdId=null;
 let transactions=[],budgets=[],budgetDefinitions=[],assets=[],debts=[],debtPayments=[],creditCards=[],recurringExpenses=[];
@@ -54,9 +61,13 @@ let currentPage='home',currentStatsRange='month',currentMonth='',chart=null,chan
 const $=s=>document.querySelector(s),fmt=n=>Number(n||0).toLocaleString('zh-TW',{maximumFractionDigits:2});
 const localISO=d=>{d=new Date(d);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`},today=()=>localISO(new Date()),ym=d=>String(d||today()).slice(0,7);
 currentMonth=ym(today());
+
+localStorage.removeItem('budget-last-definition-id');
+
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const errText=e=>e?.message||String(e||'發生錯誤');
 const actualMonth=()=>ym(today()),monthLabel=m=>{const[y,mo]=m.split('-');return `${y} 年 ${Number(mo)} 月`},monthStartDate=m=>m===actualMonth()?today():`${m}-01`;
+
 function addMonthsDate(dateStr,offset){const d=new Date(dateStr+'T12:00:00');const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+offset);const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));return localISO(d)}
 function addMonthsYM(m,offset){const[y,mo]=m.split('-').map(Number),d=new Date(y,mo-1+offset,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
 function safeMonthDate(m,day){const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate();return `${m}-${String(Math.min(Number(day)||1,last)).padStart(2,'0')}`}
@@ -92,6 +103,7 @@ async function loadAll(){
   transactions=t.data||[];budgets=b.data||[];budgetDefinitions=bd.data||[];assets=a.data||[];debts=d.data||[];debtPayments=p.data||[];creditCards=c.data||[];recurringExpenses=r.data||[];
   $('#syncText').textContent='已同步';
 }
+
 function subscribeRealtime(){channels.forEach(c=>sb.removeChannel(c));channels=[];['transactions','budgets','budget_definitions','assets','debts','debt_payments','credit_cards','recurring_expenses'].forEach(table=>{const c=sb.channel('rt-'+table).on('postgres_changes',{event:'*',schema:'public',table,filter:`household_id=eq.${householdId}`},async()=>{await loadAll();renderAll();goPage(currentPage)}).subscribe();channels.push(c)})}
 function renderAll(){renderHome();renderRecord();renderBudget();renderAssets();renderDebts();renderStats()}
 const monthTx=m=>transactions.filter(x=>ym(x.date)===m),isRealExpense=x=>x.kind==='expense'&&x.category!=='存錢',sumBy=(arr,fn)=>arr.filter(fn).reduce((s,x)=>s+Number(x.amount),0);
@@ -100,52 +112,30 @@ function activeBudgetDefinitions(){return budgetDefinitions.filter(d=>d.is_activ
 function budgetDefinitionById(id){return budgetDefinitions.find(d=>String(d.id)===String(id))||null}
 function budgetDefinitionByName(name){return budgetDefinitions.find(d=>d.name===name)||null}
 function suggestedBudgetDefinition(category){return activeBudgetDefinitions().find(d=>Array.isArray(d.expense_categories)&&d.expense_categories.includes(category))||null}
-function legacyBudgetCategory(category){if(FOOD_CATS.includes(category))return '伙食';if(category==='交通')return '交通';if(category==='存錢')return '存錢';return null}
+
+/* ★ 修正版：預算歸屬只看交易實際儲存資料，不再偷偷用晚餐＝伙食 */
 function txBudgetDefinition(tx){
-  if(tx?.budget_definition_id){const d=budgetDefinitionById(tx.budget_definition_id);if(d)return d}
-  if(tx?.budget_id){const b=budgets.find(x=>String(x.id)===String(tx.budget_id));if(b?.definition_id){const d=budgetDefinitionById(b.definition_id);if(d)return d}if(b?.category){const d=budgetDefinitionByName(b.category);if(d)return d}}
-  if(tx?.budget_category){const d=budgetDefinitionByName(tx.budget_category);if(d)return d}
-  const legacy=legacyBudgetCategory(tx?.category);return legacy?budgetDefinitionByName(legacy):null
+  if(!tx)return null;
+  if(tx.budget_definition_id){const d=budgetDefinitionById(tx.budget_definition_id);if(d)return d}
+  if(tx.budget_id){
+    const b=budgets.find(x=>String(x.id)===String(tx.budget_id));
+    if(b?.definition_id){const d=budgetDefinitionById(b.definition_id);if(d)return d}
+    if(b?.category){const d=budgetDefinitionByName(b.category);if(d)return d}
+  }
+  if(tx.budget_category){const d=budgetDefinitionByName(tx.budget_category);if(d)return d}
+  return null;
 }
-function budgetCategoryForTx(tx){return txBudgetDefinition(tx)?.name||tx?.budget_category||legacyBudgetCategory(tx?.category)||null}
+function budgetCategoryForTx(tx){return txBudgetDefinition(tx)?.name||null}
 function budgetSpentByDefinition(defId,m){return monthTx(m).filter(x=>x.kind==='expense'&&String(txBudgetDefinition(x)?.id||'')===String(defId)).reduce((s,x)=>s+Number(x.amount),0)}
-function budgetSpent(cat,m){const d=budgetDefinitionByName(cat);return d?budgetSpentByDefinition(d.id,m):0}
-function budgetInfoByDefinition(defId,m){
-  const def=budgetDefinitionById(defId);if(!def)return{id:defId,amount:0,inherited:false,from:null,budgetRowId:null};
-  const exact=budgets.find(x=>x.month===m&&String(x.definition_id)===String(defId));
-  if(exact)return{id:defId,amount:Number(exact.amount||0),inherited:false,from:m,budgetRowId:exact.id};
-  const prior=budgets.filter(x=>String(x.definition_id)===String(defId)&&x.month<m).sort((a,b)=>b.month.localeCompare(a.month))[0];
-  return prior?{id:defId,amount:Number(prior.amount||0),inherited:true,from:prior.month,budgetRowId:prior.id}:{id:defId,amount:0,inherited:false,from:null,budgetRowId:null}
-}
-function budgetInfo(cat,m){const d=budgetDefinitionByName(cat);return d?budgetInfoByDefinition(d.id,m):{id:null,amount:0,inherited:false,from:null,budgetRowId:null}}
-function budgetOptions(m,selected=''){
-  const selectedDef=budgetDefinitionById(selected)||budgetDefinitionByName(selected);
-  return `<option value="" ${!selected?'selected':''}>不扣任何預算</option>`+
-    activeBudgetDefinitions().map(d=>{const info=budgetInfoByDefinition(d.id,m),remain=info.amount-budgetSpentByDefinition(d.id,m);return `<option value="${d.id}" ${selectedDef&&String(selectedDef.id)===String(d.id)?'selected':''}>${esc(d.name)}｜${info.amount?`剩餘 $${fmt(remain)}`:'尚未設定金額'}</option>`}).join('')
-}
-async function ensureBudgetRow(defId,m){
-  if(!defId)return null;
-  const exact=budgets.find(x=>x.month===m&&String(x.definition_id)===String(defId));if(exact)return exact.id;
-  const def=budgetDefinitionById(defId);if(!def)throw new Error('找不到指定的預算');
-  const prior=budgets.filter(x=>String(x.definition_id)===String(defId)&&x.month<m).sort((a,b)=>b.month.localeCompare(a.month))[0];
-  const amount=prior?Number(prior.amount||0):0;
-  const{data,error}=await sb.from('budgets').insert({household_id:householdId,month:m,category:def.name,amount,definition_id:def.id}).select().single();
-  if(error)throw error;budgets.push(data);return data.id
-}
-async function ensureBudgetId(catOrId,m){const d=budgetDefinitionById(catOrId)||budgetDefinitionByName(catOrId);return d?ensureBudgetRow(d.id,m):null}
+function budgetInfoByDefinition(defId,m){const def=budgetDefinitionById(defId);if(!def)return{id:defId,amount:0,inherited:false,from:null,budgetRowId:null};const exact=budgets.find(x=>x.month===m&&String(x.definition_id)===String(defId));if(exact)return{id:defId,amount:Number(exact.amount||0),inherited:false,from:m,budgetRowId:exact.id};const prior=budgets.filter(x=>String(x.definition_id)===String(defId)&&x.month<m).sort((a,b)=>b.month.localeCompare(a.month))[0];return prior?{id:defId,amount:Number(prior.amount||0),inherited:true,from:prior.month,budgetRowId:prior.id}:{id:defId,amount:0,inherited:false,from:null,budgetRowId:null}}
+function budgetOptions(m,selected=''){const selectedDef=budgetDefinitionById(selected)||budgetDefinitionByName(selected);return `<option value="" ${!selected?'selected':''}>不扣任何預算</option>`+activeBudgetDefinitions().map(d=>{const info=budgetInfoByDefinition(d.id,m),remain=info.amount-budgetSpentByDefinition(d.id,m);return `<option value="${d.id}" ${selectedDef&&String(selectedDef.id)===String(d.id)?'selected':''}>${esc(d.name)}｜${info.amount?`剩餘 $${fmt(remain)}`:'尚未設定金額'}</option>`}).join('')}
+async function ensureBudgetRow(defId,m){if(!defId)return null;const exact=budgets.find(x=>x.month===m&&String(x.definition_id)===String(defId));if(exact)return exact.id;const def=budgetDefinitionById(defId);if(!def)throw new Error('找不到指定的預算');const prior=budgets.filter(x=>String(x.definition_id)===String(defId)&&x.month<m).sort((a,b)=>b.month.localeCompare(a.month))[0],amount=prior?Number(prior.amount||0):0;const{data,error}=await sb.from('budgets').insert({household_id:householdId,month:m,category:def.name,amount,definition_id:def.id}).select().single();if(error)throw error;budgets.push(data);return data.id}
 function selectedBudgetCategory(tx){return txBudgetDefinition(tx)?.id||''}
 
 function assetName(id){return assets.find(a=>String(a.id)===String(id))?.name||''}
 function cardName(id){return creditCards.find(c=>String(c.id)===String(id))?.name||''}
 async function adjustAssetBalance(assetId,delta){if(!assetId||!delta)return;const a=assets.find(x=>String(x.id)===String(assetId));if(!a)throw new Error('找不到要連動的資產');const next=Number(a.balance||0)+Number(delta);const{error}=await sb.from('assets').update({balance:next}).eq('id',assetId);if(error)throw error;a.balance=next}
-async function syncSavingAsset(oldTx,newTx){
-  const oldSaving=oldTx&&oldTx.kind==='expense'&&oldTx.category==='存錢'&&oldTx.asset_id;
-  const newSaving=newTx&&newTx.kind==='expense'&&newTx.category==='存錢'&&newTx.asset_id;
-  const deltas=new Map();
-  if(oldSaving)deltas.set(String(oldTx.asset_id),(deltas.get(String(oldTx.asset_id))||0)-Number(oldTx.amount||0));
-  if(newSaving)deltas.set(String(newTx.asset_id),(deltas.get(String(newTx.asset_id))||0)+Number(newTx.amount||0));
-  for(const[id,delta] of deltas.entries())if(delta)await adjustAssetBalance(id,delta);
-}
+async function syncSavingAsset(oldTx,newTx){const oldSaving=oldTx&&oldTx.kind==='expense'&&oldTx.category==='存錢'&&oldTx.asset_id,newSaving=newTx&&newTx.kind==='expense'&&newTx.category==='存錢'&&newTx.asset_id,deltas=new Map();if(oldSaving)deltas.set(String(oldTx.asset_id),(deltas.get(String(oldTx.asset_id))||0)-Number(oldTx.amount||0));if(newSaving)deltas.set(String(newTx.asset_id),(deltas.get(String(newTx.asset_id))||0)+Number(newTx.amount||0));for(const[id,delta]of deltas.entries())if(delta)await adjustAssetBalance(id,delta)}
 
 function cardStatementMonth(card,dateStr){const d=new Date(dateStr+'T12:00:00'),m=ym(dateStr);return d.getDate()<=Number(card.closing_day||1)?m:addMonthsYM(m,1)}
 function cardDueDate(card,statementMonth){return safeMonthDate(addMonthsYM(statementMonth,1),card.payment_day||1)}
@@ -165,6 +155,7 @@ function txItem(x){
   if(x.paid_by)parts.push(esc(x.paid_by));if(budgetCat)parts.push('🎯 '+esc(budgetCat));if(x.credit_card_id)parts.push('💳 '+esc(cardName(x.credit_card_id)));if(x.asset_id&&x.category==='存錢')parts.push('🏦 '+esc(assetName(x.asset_id)));if(x.recurring_expense_id)parts.push('🔁 固定');
   return `<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(x.category)} ${x.note?`・${esc(x.note)}`:''}</div><div class="item-sub">${parts.join(' ・ ')}</div></div><div class="amount ${cls}">${x.kind==='income'?'+':'-'}$${fmt(x.amount)}</div><button class="btn secondary small" onclick="editTxModal('${x.id}')">編輯</button></div>`
 }
+
 function optionTags(arr,selected){return arr.map(x=>`<option ${x===selected?'selected':''}>${esc(x)}</option>`).join('')}
 
 function renderRecord(){
@@ -180,34 +171,84 @@ function renderRecord(){
   <div id="assetWrap" class="hidden"><div class="label">存到哪個資產</div><select id="txAsset"><option value="">只記存錢，不連動資產</option>${assets.map(a=>`<option value="${a.id}">${esc(a.name)}｜目前 $${fmt(a.balance)}</option>`).join('')}</select><div class="hint">選擇資產後，這筆「存錢」會自動增加該資產餘額；之後修改或刪除也會跟著調整。</div></div>
   <div class="label">備註</div><textarea id="txNote" placeholder="例如：晚餐、貓砂、加油…"></textarea><button class="btn pink" onclick="addTransaction()">儲存這一筆</button></div></div>
   <div class="section-title"><h3>${monthLabel(currentMonth)}全部紀錄</h3><span class="pill">${tx.length} 筆</span></div><div class="list">${tx.map(txItem).join('')||'<div class="muted center">這個月還沒有資料</div>'}</div>`;
-  window._txKind='expense';applyRememberedRecordDefaults();onRecordCategoryChange();updateCreditCardWrap()
+  window._txKind='expense';applyRememberedRecordDefaults();suggestBudgetFromCategory();onRecordCategoryChange(false);updateCreditCardWrap()
 }
+
 function refreshBudgetSelector(){const select=$('#txBudget'),date=$('#txDate')?.value;if(!select||!date)return;const current=select.value;select.innerHTML=budgetOptions(ym(date),current);updateBudgetHint()}
 function updateBudgetHint(){const el=$('#budgetHint'),select=$('#txBudget'),date=$('#txDate')?.value;if(!el||!select||!date)return;const defId=select.value;if(!defId){el.textContent='這筆支出不會計入任何預算。';return}const d=budgetDefinitionById(defId),info=budgetInfoByDefinition(defId,ym(date)),remain=info.amount-budgetSpentByDefinition(defId,ym(date));el.innerHTML=info.amount?`目前「${esc(d?.name||'預算')}」預算剩餘 <b>$${fmt(remain)}</b>。`:`「${esc(d?.name||'預算')}」目前沒有設定預算金額，仍可先記帳。`}
 function suggestBudgetFromCategory(){const s=$('#txBudget');if(!s)return;const d=suggestedBudgetDefinition($('#txCategory')?.value);s.value=d?.id||'';updateBudgetHint()}
-function onRecordCategoryChange(){suggestBudgetFromCategory();const saving=(window._txKind||'expense')==='expense'&&$('#txCategory')?.value==='存錢';$('#assetWrap')?.classList.toggle('hidden',!saving)}
+
+/* changeBudget=true 只有分類真的被使用者換掉時才重新建議預算 */
+function onRecordCategoryChange(changeBudget=true){
+  if(changeBudget)suggestBudgetFromCategory();
+  const saving=(window._txKind||'expense')==='expense'&&$('#txCategory')?.value==='存錢';
+  $('#assetWrap')?.classList.toggle('hidden',!saving)
+}
+
 function updateCreditCardWrap(){const show=(window._txKind||'expense')==='expense'&&paymentLooksCard($('#txPayment')?.value)&&creditCards.length;$('#creditCardWrap')?.classList.toggle('hidden',!show);if(!show&&$('#txCreditCard'))$('#txCreditCard').value=''}
-function applyRememberedRecordDefaults(){const p=localStorage.getItem('budget-last-payment'),paid=localStorage.getItem('budget-last-paidby'),cat=localStorage.getItem('budget-last-expense-cat'),budget=localStorage.getItem('budget-last-definition-id');if(p&&PAYMENT_METHODS.includes(p))$('#txPayment').value=p;if(paid&&['姐姐','揍揍','共同'].includes(paid))$('#txPaidBy').value=paid;if(cat&&EXPENSE_CATS.includes(cat))$('#txCategory').value=cat;if(budget&&budgetDefinitionById(budget))$('#txBudget').value=budget}
-function setKind(kind){window._txKind=kind;$('#segExpense').classList.toggle('on',kind==='expense');$('#segIncome').classList.toggle('on',kind==='income');const cats=kind==='expense'?EXPENSE_CATS:INCOME_CATS;$('#txCategory').innerHTML=cats.map(x=>`<option>${x}</option>`).join('');const remembered=localStorage.getItem(kind==='expense'?'budget-last-expense-cat':'budget-last-income-cat');if(remembered&&cats.includes(remembered))$('#txCategory').value=remembered;$('#paymentWrap').classList.toggle('hidden',kind==='income');$('#paidByWrap').classList.toggle('hidden',kind==='income');$('#budgetWrap').classList.toggle('hidden',kind==='income');$('#assetWrap').classList.add('hidden');$('#creditCardWrap').classList.add('hidden');if(kind==='expense'){const rb=localStorage.getItem('budget-last-definition-id');if(rb&&budgetDefinitionById(rb))$('#txBudget').value=rb;else suggestBudgetFromCategory();onRecordCategoryChange();updateCreditCardWrap()}}
+
+/* ★ 不再記憶上一筆預算 */
+function applyRememberedRecordDefaults(){
+  const p=localStorage.getItem('budget-last-payment'),paid=localStorage.getItem('budget-last-paidby'),cat=localStorage.getItem('budget-last-expense-cat');
+  if(p&&PAYMENT_METHODS.includes(p))$('#txPayment').value=p;
+  if(paid&&['姐姐','揍揍','共同'].includes(paid))$('#txPaidBy').value=paid;
+  if(cat&&EXPENSE_CATS.includes(cat))$('#txCategory').value=cat
+}
+
+function setKind(kind){
+  window._txKind=kind;
+  $('#segExpense').classList.toggle('on',kind==='expense');$('#segIncome').classList.toggle('on',kind==='income');
+  const cats=kind==='expense'?EXPENSE_CATS:INCOME_CATS;
+  $('#txCategory').innerHTML=cats.map(x=>`<option>${x}</option>`).join('');
+  const remembered=localStorage.getItem(kind==='expense'?'budget-last-expense-cat':'budget-last-income-cat');
+  if(remembered&&cats.includes(remembered))$('#txCategory').value=remembered;
+  $('#paymentWrap').classList.toggle('hidden',kind==='income');$('#paidByWrap').classList.toggle('hidden',kind==='income');$('#budgetWrap').classList.toggle('hidden',kind==='income');$('#assetWrap').classList.add('hidden');$('#creditCardWrap').classList.add('hidden');
+  if(kind==='expense'){suggestBudgetFromCategory();onRecordCategoryChange(false);updateCreditCardWrap()}
+}
 
 async function addTransaction(){
   const amount=Number($('#txAmount').value);if(!amount)return alert('請輸入金額');
   const kind=window._txKind||'expense',date=$('#txDate').value,row={household_id:householdId,user_id:session.user.id,kind,date,amount,category:$('#txCategory').value,note:$('#txNote').value.trim(),budget_id:null,budget_category:null,budget_definition_id:null,asset_id:null,credit_card_id:null};
   localStorage.setItem(kind==='expense'?'budget-last-expense-cat':'budget-last-income-cat',row.category);
+
   if(kind==='expense'){
-    row.payment_method=$('#txPayment').value;row.paid_by=$('#txPaidBy').value;
-    const budgetDefId=$('#txBudget').value;const budgetDef=budgetDefinitionById(budgetDefId);row.budget_definition_id=budgetDefId||null;row.budget_category=budgetDef?.name||null;if(budgetDefId){try{row.budget_id=await ensureBudgetRow(budgetDefId,ym(date))}catch(e){return alert('預算連結失敗：'+errText(e))}localStorage.setItem('budget-last-definition-id',budgetDefId)}else localStorage.removeItem('budget-last-definition-id');
+    row.payment_method=$('#txPayment').value;
+    row.paid_by=$('#txPaidBy').value;
+
+    /* ★ 最重要：完全以使用者現在選的預算為準 */
+    const budgetDefId=$('#txBudget').value;
+    const budgetDef=budgetDefinitionById(budgetDefId);
+
+    if(budgetDefId){
+      row.budget_definition_id=budgetDefId;
+      row.budget_category=budgetDef?.name||null;
+      try{row.budget_id=await ensureBudgetRow(budgetDefId,ym(date))}
+      catch(e){return alert('預算連結失敗：'+errText(e))}
+    }else{
+      row.budget_id=null;
+      row.budget_category=null;
+      row.budget_definition_id=null;
+    }
+
     if(row.category==='存錢')row.asset_id=$('#txAsset').value||null;
     if(paymentLooksCard(row.payment_method))row.credit_card_id=$('#txCreditCard')?.value||null;
-    localStorage.setItem('budget-last-payment',row.payment_method);localStorage.setItem('budget-last-paidby',row.paid_by)
+
+    localStorage.setItem('budget-last-payment',row.payment_method);
+    localStorage.setItem('budget-last-paidby',row.paid_by)
   }
-  const{data,error}=await sb.from('transactions').insert(row).select().single();if(error)return alert(errText(error));
-  try{await syncSavingAsset(null,data)}catch(e){await sb.from('transactions').delete().eq('id',data.id);return alert('記帳沒有完成，資產連動失敗：'+errText(e))}
+
+  const{data,error}=await sb.from('transactions').insert(row).select().single();
+  if(error)return alert(errText(error));
+
+  try{await syncSavingAsset(null,data)}
+  catch(e){await sb.from('transactions').delete().eq('id',data.id);return alert('記帳沒有完成，資產連動失敗：'+errText(e))}
+
   await loadAll();renderAll();goPage('record');alert('已記錄 ♡')
 }
 
 function editTxModal(id){
-  const x=transactions.find(t=>String(t.id)===String(id));if(!x)return;const budgetCat=selectedBudgetCategory(x);
+  const x=transactions.find(t=>String(t.id)===String(id));if(!x)return;
+  const budgetCat=selectedBudgetCategory(x);
   openModal(`<div class="sheet-head"><h3>編輯記帳</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack">
   <div class="label">類型</div><select id="editTxKind" onchange="updateEditTxKind()"><option value="expense" ${x.kind==='expense'?'selected':''}>支出</option><option value="income" ${x.kind==='income'?'selected':''}>收入</option></select>
   <div class="label">日期</div><input id="editTxDate" type="date" value="${x.date}" onchange="refreshEditBudgetOptions()">
@@ -218,21 +259,53 @@ function editTxModal(id){
   <div id="editCreditCardWrap" class="hidden"><div class="label">是哪張信用卡</div><select id="editTxCreditCard">${creditCardOptions(x.credit_card_id)}</select></div>
   <div id="editPaidByWrap"><div class="label">誰付款</div><select id="editTxPaidBy">${optionTags(['姐姐','揍揍','共同'],x.paid_by)}</select></div>
   <div id="editAssetWrap" class="hidden"><div class="label">存到哪個資產</div><select id="editTxAsset"><option value="">只記存錢，不連動資產</option>${assets.map(a=>`<option value="${a.id}" ${String(a.id)===String(x.asset_id)?'selected':''}>${esc(a.name)}｜目前 $${fmt(a.balance)}</option>`).join('')}</select></div>
-  <div class="label">備註</div><textarea id="editTxNote">${esc(x.note||'')}</textarea><button class="btn" onclick="saveTxEdit('${x.id}')">儲存修改</button><button class="btn danger" onclick="deleteTx('${x.id}')">刪除此筆</button></div>`);
+  <div class="label">備註</div><textarea id="editTxNote">${esc(x.note||'')}</textarea>
+  <button class="btn" onclick="saveTxEdit('${x.id}')">儲存修改</button>
+  <button class="btn danger" onclick="deleteTx('${x.id}')">刪除此筆</button></div>`);
   window._editingTx=x;updateEditTxKind(x.category,budgetCat);updateEditCreditCardWrap();onEditCategoryChange(false)
 }
+
 function refreshEditBudgetOptions(){const date=$('#editTxDate')?.value,select=$('#editTxBudget');if(!date||!select)return;select.innerHTML=budgetOptions(ym(date),select.value)}
 function onEditCategoryChange(changeBudget=true){const saving=$('#editTxKind')?.value==='expense'&&$('#editTxCategory')?.value==='存錢';$('#editAssetWrap')?.classList.toggle('hidden',!saving);if(changeBudget){const s=$('#editTxBudget'),d=suggestedBudgetDefinition($('#editTxCategory')?.value);if(s)s.value=d?.id||''}}
 function updateEditCreditCardWrap(){const show=$('#editTxKind')?.value==='expense'&&paymentLooksCard($('#editTxPayment')?.value)&&creditCards.length;$('#editCreditCardWrap')?.classList.toggle('hidden',!show);if(!show&&$('#editTxCreditCard'))$('#editTxCreditCard').value=''}
 function updateEditTxKind(selected,selectedBudget){const kind=$('#editTxKind').value,cats=kind==='expense'?EXPENSE_CATS:INCOME_CATS;$('#editTxCategory').innerHTML=optionTags(cats,selected||window._editingTx?.category);$('#editPayWrap').classList.toggle('hidden',kind==='income');$('#editPaidByWrap').classList.toggle('hidden',kind==='income');$('#editBudgetWrap').classList.toggle('hidden',kind==='income');if(kind==='expense'&&selectedBudget!==undefined)$('#editTxBudget').value=selectedBudget||'';onEditCategoryChange(false);updateEditCreditCardWrap()}
+
 async function saveTxEdit(id){
-  const old=transactions.find(t=>String(t.id)===String(id)),kind=$('#editTxKind').value,amount=Number($('#editTxAmount').value);if(!amount)return alert('請輸入金額');
+  const old=transactions.find(t=>String(t.id)===String(id)),kind=$('#editTxKind').value,amount=Number($('#editTxAmount').value);
+  if(!amount)return alert('請輸入金額');
+
   const date=$('#editTxDate').value,row={kind,date,amount,category:$('#editTxCategory').value,note:$('#editTxNote').value.trim(),payment_method:null,paid_by:null,budget_id:null,budget_category:null,budget_definition_id:null,asset_id:null,credit_card_id:null};
-  if(kind==='expense'){row.payment_method=$('#editTxPayment').value;row.paid_by=$('#editTxPaidBy').value;const budgetDefId=$('#editTxBudget').value,budgetDef=budgetDefinitionById(budgetDefId);row.budget_definition_id=budgetDefId||null;row.budget_category=budgetDef?.name||null;if(budgetDefId){try{row.budget_id=await ensureBudgetRow(budgetDefId,ym(date))}catch(e){return alert('預算連結失敗：'+errText(e))}}if(row.category==='存錢')row.asset_id=$('#editTxAsset').value||null;if(paymentLooksCard(row.payment_method))row.credit_card_id=$('#editTxCreditCard')?.value||null}
-  try{await syncSavingAsset(old,row)}catch(e){return alert('資產連動失敗：'+errText(e))}
-  const{error}=await sb.from('transactions').update(row).eq('id',id);if(error){try{await syncSavingAsset(row,old)}catch{}return alert(errText(error))}
+
+  if(kind==='expense'){
+    row.payment_method=$('#editTxPayment').value;
+    row.paid_by=$('#editTxPaidBy').value;
+
+    const budgetDefId=$('#editTxBudget').value,budgetDef=budgetDefinitionById(budgetDefId);
+
+    if(budgetDefId){
+      row.budget_definition_id=budgetDefId;
+      row.budget_category=budgetDef?.name||null;
+      try{row.budget_id=await ensureBudgetRow(budgetDefId,ym(date))}
+      catch(e){return alert('預算連結失敗：'+errText(e))}
+    }else{
+      row.budget_id=null;
+      row.budget_category=null;
+      row.budget_definition_id=null;
+    }
+
+    if(row.category==='存錢')row.asset_id=$('#editTxAsset').value||null;
+    if(paymentLooksCard(row.payment_method))row.credit_card_id=$('#editTxCreditCard')?.value||null
+  }
+
+  try{await syncSavingAsset(old,row)}
+  catch(e){return alert('資產連動失敗：'+errText(e))}
+
+  const{error}=await sb.from('transactions').update(row).eq('id',id);
+  if(error){try{await syncSavingAsset(row,old)}catch{}return alert(errText(error))}
+
   closeModal();await loadAll();renderAll();goPage(currentPage)
 }
+
 async function deleteTx(id){if(!confirm('確定要刪除這筆紀錄嗎？'))return;const old=transactions.find(t=>String(t.id)===String(id));try{await syncSavingAsset(old,null)}catch(e){return alert('刪除前資產調整失敗：'+errText(e))}const{error}=await sb.from('transactions').delete().eq('id',id);if(error){try{await syncSavingAsset(null,old)}catch{}return alert(errText(error))}closeModal();await loadAll();renderAll();goPage(currentPage)}
 
 function renderBudget(){
@@ -240,32 +313,56 @@ function renderBudget(){
   const cards=defs.map(d=>{const info=budgetInfoByDefinition(d.id,m),limit=info.amount,spent=budgetSpentByDefinition(d.id,m),remain=limit-spent,pct=limit?Math.min(100,spent/limit*100):0;return `<div class="card"><div class="section-title"><h3>${esc(d.name)} ${info.inherited?'<span class="pill">沿用 '+info.from+'</span>':''}</h3><div class="row" style="flex:0 0 auto"><button class="btn secondary small" onclick="editBudgetDefinition('${d.id}')">規則</button><button class="btn secondary small" onclick="editBudgetAmount('${d.id}','${m}',${limit})">金額</button></div></div><div><b>$${fmt(spent)}</b> / $${fmt(limit)}</div><div class="progress"><i class="${remain<0?'over':''}" style="width:${pct}%"></i></div><div class="${remain<0?'expense':'muted'}" style="margin-top:7px">${remain<0?'超支':'剩餘'} $${fmt(Math.abs(remain))}</div><div class="muted" style="margin-top:7px">自動分類：${(d.expense_categories||[]).length?(d.expense_categories||[]).map(esc).join('、'):'未設定'}</div></div>`}).join('');
   $('#page-budget').innerHTML=`${monthNav()}<div class="section-title"><h3>${monthLabel(m)} 每月預算</h3><button class="btn pink" onclick="editBudgetDefinition()">＋新增預算</button></div>${cards||'<div class="muted center">還沒有預算，先新增一包吧。</div>'}<div class="muted center">新月份沒有單獨設定時，會沿用最近一個月的金額；預算名稱與自動分類規則可以隨時修改。</div>`
 }
+
 function editBudgetAmount(defId,m,amount){const d=budgetDefinitionById(defId);if(!d)return;openModal(`<div class="sheet-head"><h3>設定 ${esc(d.name)} 預算</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><div class="muted">這次儲存只設定 ${monthLabel(m)}；其他月份不會被改掉。</div><input id="budgetAmount" type="number" min="0" value="${amount}"><button class="btn" onclick="saveBudgetAmount('${defId}','${m}')">儲存</button></div>`)}
 async function saveBudgetAmount(defId,m){const d=budgetDefinitionById(defId);if(!d)return;const amount=Number($('#budgetAmount').value||0),existing=budgets.find(b=>b.month===m&&String(b.definition_id)===String(defId));let q;if(existing)q=sb.from('budgets').update({amount,category:d.name}).eq('id',existing.id);else q=sb.from('budgets').insert({household_id:householdId,month:m,category:d.name,amount,definition_id:defId});const{error}=await q;if(error)return alert(errText(error));closeModal();await loadAll();renderAll();goPage('budget')}
+
 function editBudgetDefinition(id=''){
   const d=id?budgetDefinitionById(id):null,selected=new Set(d?.expense_categories||[]);
   const checks=EXPENSE_CATS.map(c=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 2px"><input type="checkbox" name="budgetDefCat" value="${esc(c)}" style="width:20px;flex:0 0 20px" ${selected.has(c)?'checked':''}><span>${esc(c)}</span></label>`).join('');
-  openModal(`<div class="sheet-head"><h3>${d?'編輯':'新增'}預算</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><div class="label">預算名稱</div><input id="budgetDefName" placeholder="例如：生活費、約會、寵物" value="${esc(d?.name||'')}"><div class="label">哪些支出分類預設扣這包</div><div class="card" style="margin:0;max-height:320px;overflow:auto">${checks}</div><div class="hint">同一個支出分類建議只指定給一包預算。儲存時若它原本屬於其他預算，系統會自動從舊預算移除。</div><button class="btn" onclick="saveBudgetDefinition('${d?.id||''}')">儲存</button>${d?`<button class="btn danger" onclick="deleteBudgetDefinition('${d.id}')">刪除此預算</button>`:''}</div>`)
+  openModal(`<div class="sheet-head"><h3>${d?'編輯':'新增'}預算</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><div class="label">預算名稱</div><input id="budgetDefName" placeholder="例如：生活費、約會、寵物" value="${esc(d?.name||'')}"><div class="label">哪些支出分類預設扣這包</div><div class="card" style="margin:0;max-height:320px;overflow:auto">${checks}</div><div class="hint">這些勾選只負責「記帳時預設選哪一包」。每一筆記帳仍然可以自己改成其他預算或「不扣任何預算」。</div><button class="btn" onclick="saveBudgetDefinition('${d?.id||''}')">儲存</button>${d?`<button class="btn danger" onclick="deleteBudgetDefinition('${d.id}')">刪除此預算</button>`:''}</div>`)
 }
+
 async function saveBudgetDefinition(id=''){
   const name=$('#budgetDefName').value.trim();if(!name)return alert('請輸入預算名稱');
   const cats=[...document.querySelectorAll('input[name="budgetDefCat"]:checked')].map(x=>x.value);
   const duplicate=budgetDefinitions.find(d=>d.name===name&&String(d.id)!==String(id));if(duplicate)return alert('已經有同名預算了');
-  for(const d of budgetDefinitions){if(String(d.id)===String(id))continue;const filtered=(d.expense_categories||[]).filter(c=>!cats.includes(c));if(filtered.length!==(d.expense_categories||[]).length){const{error}=await sb.from('budget_definitions').update({expense_categories:filtered}).eq('id',d.id);if(error)return alert('更新其他預算規則失敗：'+errText(error))}}
-  let defId=id;if(id){const{error}=await sb.from('budget_definitions').update({name,expense_categories:cats}).eq('id',id);if(error)return alert(errText(error));const{error:be}=await sb.from('budgets').update({category:name}).eq('definition_id',id);if(be)return alert('預算名稱已更新，但月份資料同步失敗：'+errText(be));const{error:te}=await sb.from('transactions').update({budget_category:name}).eq('budget_definition_id',id);if(te)return alert('預算名稱已更新，但記帳顯示名稱同步失敗：'+errText(te))}
-  else{const nextOrder=Math.max(0,...budgetDefinitions.map(d=>Number(d.sort_order||0)))+10;const{data,error}=await sb.from('budget_definitions').insert({household_id:householdId,name,expense_categories:cats,sort_order:nextOrder,is_active:true}).select().single();if(error)return alert(errText(error));defId=data.id;const inheritedAmount=0;const{error:be}=await sb.from('budgets').insert({household_id:householdId,month:currentMonth,category:name,amount:inheritedAmount,definition_id:defId});if(be)return alert('預算已建立，但本月金額資料建立失敗：'+errText(be))}
+
+  for(const d of budgetDefinitions){
+    if(String(d.id)===String(id))continue;
+    const filtered=(d.expense_categories||[]).filter(c=>!cats.includes(c));
+    if(filtered.length!==(d.expense_categories||[]).length){
+      const{error}=await sb.from('budget_definitions').update({expense_categories:filtered}).eq('id',d.id);
+      if(error)return alert('更新其他預算規則失敗：'+errText(error))
+    }
+  }
+
+  let defId=id;
+  if(id){
+    const{error}=await sb.from('budget_definitions').update({name,expense_categories:cats}).eq('id',id);if(error)return alert(errText(error));
+    const{error:be}=await sb.from('budgets').update({category:name}).eq('definition_id',id);if(be)return alert('預算名稱已更新，但月份資料同步失敗：'+errText(be));
+    const{error:te}=await sb.from('transactions').update({budget_category:name}).eq('budget_definition_id',id);if(te)return alert('預算名稱已更新，但記帳顯示名稱同步失敗：'+errText(te))
+  }else{
+    const nextOrder=Math.max(0,...budgetDefinitions.map(d=>Number(d.sort_order||0)))+10;
+    const{data,error}=await sb.from('budget_definitions').insert({household_id:householdId,name,expense_categories:cats,sort_order:nextOrder,is_active:true}).select().single();if(error)return alert(errText(error));
+    defId=data.id;
+    const{error:be}=await sb.from('budgets').insert({household_id:householdId,month:currentMonth,category:name,amount:0,definition_id:defId});if(be)return alert('預算已建立，但本月金額資料建立失敗：'+errText(be))
+  }
+
   closeModal();await loadAll();renderAll();goPage('budget')
 }
+
 async function deleteBudgetDefinition(id){
   const d=budgetDefinitionById(id);if(!d)return;
   const used=transactions.some(t=>String(t.budget_definition_id)===String(id)||String(txBudgetDefinition(t)?.id||'')===String(id));
   if(used){if(!confirm(`「${d.name}」已有記帳紀錄。刪除後舊記帳會保留，但不再歸屬任何預算。確定要刪除嗎？`))return}else if(!confirm(`確定刪除「${d.name}」預算嗎？`))return;
-  const{error}=await sb.from('budget_definitions').delete().eq('id',id);if(error)return alert(errText(error));closeModal();await loadAll();renderAll();goPage('budget')
+  const{error}=await sb.from('budget_definitions').delete().eq('id',id);if(error)return alert(errText(error));
+  closeModal();await loadAll();renderAll();goPage('budget')
 }
 
 function renderAssets(){const total=assets.reduce((s,x)=>s+Number(x.balance),0);$('#page-assets').innerHTML=`<div class="card hero"><h2>我們的資產</h2><div class="big">$${fmt(total)}</div><div class="muted">銀行、現金、共同存款、存錢筒都可以放這裡；「存錢」可直接連動資產。</div></div><div class="section-title"><h3>資產項目</h3><button class="btn pink" onclick="assetModal()">＋新增</button></div><div class="list">${assets.map(a=>`<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(a.name)}</div><div class="item-sub">${esc(a.note||'')}</div></div><div class="amount">$${fmt(a.balance)}</div><button class="btn secondary small" onclick="assetModal('${a.id}')">編輯</button></div>`).join('')||'<div class="muted center">還沒有資產資料</div>'}</div>`}
 function assetModal(id){const a=id?assets.find(x=>String(x.id)===String(id)):null;openModal(`<div class="sheet-head"><h3>${a?'編輯':'新增'}資產</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><input id="assetName" placeholder="例如：共同存款" value="${esc(a?.name||'')}"><input id="assetBalance" type="number" step="0.01" placeholder="目前金額" value="${a?Number(a.balance):''}"><textarea id="assetNote" placeholder="備註">${esc(a?.note||'')}</textarea><button class="btn pink" onclick="saveAsset('${a?.id||''}')">${a?'儲存修改':'新增'}</button>${a?`<button class="btn danger" onclick="deleteAsset('${a.id}')">刪除此資產</button>`:''}</div>`)}
-async function saveAsset(id){const name=$('#assetName').value.trim(),balance=Number($('#assetBalance').value||0);if(!name)return alert('請輸入名稱');const row={household_id:householdId,name,balance,note:$('#assetNote').value.trim()};const q=id?sb.from('assets').update(row).eq('id',id):sb.from('assets').insert(row),{error}=await q;if(error)return alert(errText(error));closeModal();await loadAll();renderAll();goPage('assets')}
+async function saveAsset(id){const name=$('#assetName').value.trim(),balance=Number($('#assetBalance').value||0);if(!name)return alert('請輸入名稱');const row={household_id:householdId,name,balance,note:$('#assetNote').value.trim()},q=id?sb.from('assets').update(row).eq('id',id):sb.from('assets').insert(row),{error}=await q;if(error)return alert(errText(error));closeModal();await loadAll();renderAll();goPage('assets')}
 async function deleteAsset(id){if(transactions.some(t=>String(t.asset_id)===String(id)))return alert('這個資產目前有「存錢」紀錄連動，請先把那些紀錄改到別的資產或取消連動。');if(!confirm('確定刪除此資產？'))return;const{error}=await sb.from('assets').delete().eq('id',id);if(error)return alert(errText(error));closeModal();await loadAll();renderAll();goPage('assets')}
 
 function renderDebts(){
@@ -273,17 +370,19 @@ function renderDebts(){
   const cardHtml=creditCards.length?creditCards.map(c=>{const amount=cardBillAmount(c,m),due=cardDueDate(c,m);return `<div class="card"><div class="section-title"><h3>💳 ${esc(c.name)}</h3><span class="pill">${esc(c.owner_name||'')}</span></div><div style="font-size:26px;font-weight:800;color:var(--brown)">$${fmt(amount)}</div><div class="muted" style="margin-top:6px">${m} 帳單 ・ 結帳日 ${c.closing_day} 日 ・ 預計繳款 ${due}</div></div>`}).join(''):'<div class="muted center">尚未設定信用卡，可從右上角 ⚙️ 設定。</div>';
   $('#page-debts').innerHTML=`${monthNav()}<div class="section-title"><h3>信用卡帳單</h3><button class="btn secondary small" onclick="creditCardsModal()">管理卡片</button></div>${cardHtml}<div style="height:6px"></div><div class="grid2"><div class="mini">全部剩餘分期<b>$${fmt(remain)}</b></div><div class="mini">${monthLabel(m)}未繳<b class="expense">$${fmt(monthUnpaid)}</b></div><div class="mini">${monthLabel(m)}已繳<b class="income">$${fmt(monthPaid)}</b></div><div class="mini">當月總應繳<b>$${fmt(monthPaid+monthUnpaid)}</b></div></div><div style="height:12px"></div><div class="section-title"><h3>${monthLabel(m)}還款</h3><button class="btn pink" onclick="debtModal()">＋新增負債</button></div>${selected.length?monthBlock(m):'<div class="muted center">這個月沒有分期資料</div>'}<div style="height:14px"></div><div class="section-title"><h3>全部負債</h3></div><div class="list">${debts.map(d=>{const ps=debtPayments.filter(p=>String(p.debt_id)===String(d.id)),left=ps.filter(p=>!p.is_paid).reduce((s,p)=>s+Number(p.amount),0);return `<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(d.name)}</div><div class="item-sub">${esc(d.source||'')} ・ ${ps.filter(p=>p.is_paid).length}/${d.installments||ps.length} 期已繳</div></div><b>$${fmt(left)}</b><button class="btn secondary small" onclick="editDebtModal('${d.id}')">編輯</button></div>`}).join('')||'<div class="muted center">還沒有負債</div>'}</div>`
 }
+
 function creditCardsModal(){openModal(`<div class="sheet-head"><h3>信用卡管理</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><button class="btn pink" onclick="creditCardEditModal()">＋新增信用卡</button>${creditCards.map(c=>`<div class="item"><div class="item-main"><div class="item-title">${esc(c.name)}</div><div class="item-sub">${esc(c.owner_name||'')} ・ 結帳 ${c.closing_day} 日 ・ 繳款 ${c.payment_day} 日</div></div><button class="btn secondary small" onclick="creditCardEditModal('${c.id}')">編輯</button></div>`).join('')||'<div class="muted center">還沒有信用卡設定</div>'}</div>`)}
 function creditCardEditModal(id){const c=id?creditCards.find(x=>String(x.id)===String(id)):null;openModal(`<div class="sheet-head"><h3>${c?'編輯':'新增'}信用卡</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><div class="label">卡片名稱</div><input id="ccName" placeholder="例如：國泰 CUBE" value="${esc(c?.name||'')}"><div class="label">持卡人</div><select id="ccOwner">${optionTags(['姐姐','揍揍','共同'],c?.owner_name||'揍揍')}</select><div class="label">每月結帳日</div><input id="ccClosing" type="number" min="1" max="31" value="${c?.closing_day||20}"><div class="label">每月繳款日</div><input id="ccPayment" type="number" min="1" max="31" value="${c?.payment_day||10}"><div class="hint">帳單月份會依結帳日計算；繳款日顯示在下一個月。</div><button class="btn" onclick="saveCreditCard('${c?.id||''}')">儲存</button>${c?`<button class="btn danger" onclick="deleteCreditCard('${c.id}')">刪除卡片設定</button>`:''}</div>`)}
-async function saveCreditCard(id){const name=$('#ccName').value.trim(),closing=Number($('#ccClosing').value),payment=Number($('#ccPayment').value);if(!name||closing<1||closing>31||payment<1||payment>31)return alert('請填正確的卡片名稱、結帳日與繳款日');const row={household_id:householdId,name,owner_name:$('#ccOwner').value,closing_day:closing,payment_day:payment};const q=id?sb.from('credit_cards').update(row).eq('id',id):sb.from('credit_cards').insert(row),{error}=await q;if(error)return alert(errText(error));await loadAll();creditCardsModal();renderAll()}
+async function saveCreditCard(id){const name=$('#ccName').value.trim(),closing=Number($('#ccClosing').value),payment=Number($('#ccPayment').value);if(!name||closing<1||closing>31||payment<1||payment>31)return alert('請填正確的卡片名稱、結帳日與繳款日');const row={household_id:householdId,name,owner_name:$('#ccOwner').value,closing_day:closing,payment_day:payment},q=id?sb.from('credit_cards').update(row).eq('id',id):sb.from('credit_cards').insert(row),{error}=await q;if(error)return alert(errText(error));await loadAll();creditCardsModal();renderAll()}
 async function deleteCreditCard(id){if(!confirm('刪除卡片設定後，既有記帳仍會保留，但不再連到這張卡。確定嗎？'))return;const{error}=await sb.from('credit_cards').delete().eq('id',id);if(error)return alert(errText(error));await loadAll();creditCardsModal();renderAll()}
 
 function monthBlock(m){const ps=debtPayments.filter(x=>ym(x.due_date)===m),total=ps.filter(x=>!x.is_paid).reduce((s,x)=>s+Number(x.amount),0);return `<div class="month-group"><div class="month-head"><span>${m}</span><span>未繳 $${fmt(total)}</span></div><div class="card" style="padding:8px 14px">${ps.map(p=>{const d=debts.find(x=>String(x.id)===String(p.debt_id));return `<div class="payrow ${p.is_paid?'paid':''}"><input class="check" type="checkbox" ${p.is_paid?'checked':''} onchange="togglePayment('${p.id}',this.checked)"><div class="item-main"><div class="item-title">${esc(d?.name||'負債')} <span class="pill ${p.is_paid?'good':''}">${p.installment_no}/${d?.installments||'?'}期</span></div><div class="item-sub">${p.due_date} ${p.is_paid?'・已繳':'・待繳'}</div></div><b>$${fmt(p.amount)}</b></div>`}).join('')}</div></div>`}
+
 function debtModal(){openModal(`<div class="sheet-head"><h3>新增分期／負債</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><input id="debtName" placeholder="帳務名稱，例如：手機、家電"><select id="debtSource"><option>姐姐的卡</option><option>揍揍（國泰信用卡）</option><option>揍揍（台新信用卡）</option><option>其他</option></select><input id="debtTotal" type="number" step="0.01" placeholder="分期總金額"><select id="debtInstallments">${Array.from({length:72},(_,i)=>`<option value="${i+1}">${i+1}期</option>`).join('')}</select><input id="debtPayment" type="number" step="0.01" placeholder="每期應繳金額"><div class="label">首次還款日</div><input id="debtFirst" type="date" value="${monthStartDate(currentMonth)}"><textarea id="debtNote" placeholder="備註"></textarea><button class="btn pink" onclick="addDebt()">建立還款計畫</button></div>`)}
 async function addDebt(){const name=$('#debtName').value.trim(),total=Number($('#debtTotal').value),installments=Number($('#debtInstallments').value),payment=Number($('#debtPayment').value);if(!name||!total||!payment)return alert('請填完整名稱、總金額與每期金額');const{error}=await sb.rpc('create_debt_with_schedule',{p_household_id:householdId,p_name:name,p_source:$('#debtSource').value,p_total_amount:total,p_installments:installments,p_payment_amount:payment,p_first_due_date:$('#debtFirst').value,p_note:$('#debtNote').value.trim()});if(error)return alert(errText(error));closeModal();await loadAll();renderAll();goPage('debts')}
 function editDebtModal(id){const d=debts.find(x=>String(x.id)===String(id));if(!d)return;const first=debtPayments.filter(p=>String(p.debt_id)===String(id)).sort((a,b)=>a.installment_no-b.installment_no)[0]?.due_date||today();openModal(`<div class="sheet-head"><h3>編輯負債</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><input id="editDebtName" value="${esc(d.name||'')}"><select id="editDebtSource">${optionTags(['姐姐的卡','揍揍（國泰信用卡）','揍揍（台新信用卡）','其他'],d.source)}</select><input id="editDebtTotal" type="number" step="0.01" value="${Number(d.total_amount||0)}"><select id="editDebtInstallments">${Array.from({length:72},(_,i)=>`<option value="${i+1}" ${Number(d.installments)===(i+1)?'selected':''}>${i+1}期</option>`).join('')}</select><input id="editDebtPayment" type="number" step="0.01" value="${Number(d.payment_amount||0)}"><div class="label">首次還款日</div><input id="editDebtFirst" type="date" value="${first}"><textarea id="editDebtNote">${esc(d.note||'')}</textarea><div class="notice">修改期數、每期金額或首次還款日會重新建立分期表；已勾選的期數會盡量依期數保留。</div><button class="btn" onclick="saveDebtEdit('${d.id}')">儲存修改</button><button class="btn danger" onclick="deleteDebt('${d.id}')">刪除整筆負債</button></div>`)}
 function buildSchedule(debtId,total,installments,payment,first){const rows=[];for(let i=1;i<=installments;i++){let amount=payment;if(i===installments){const rest=total-payment*(installments-1);if(rest>0)amount=rest}rows.push({household_id:householdId,debt_id:debtId,installment_no:i,due_date:addMonthsDate(first,i-1),amount})}return rows}
-async function saveDebtEdit(id){const name=$('#editDebtName').value.trim(),total=Number($('#editDebtTotal').value),installments=Number($('#editDebtInstallments').value),payment=Number($('#editDebtPayment').value),first=$('#editDebtFirst').value;if(!name||!total||!installments||!payment||!first)return alert('請把資料填完整');const old=debtPayments.filter(p=>String(p.debt_id)===String(id)),oldMap=new Map(old.map(p=>[Number(p.installment_no),p])),update={name,source:$('#editDebtSource').value,total_amount:total,installments,payment_amount:payment,note:$('#editDebtNote').value.trim()};const{error:de}=await sb.from('debts').update(update).eq('id',id);if(de)return alert(errText(de));const desired=buildSchedule(id,total,installments,payment,first);for(const row of desired){const exists=oldMap.get(row.installment_no);const q=exists?sb.from('debt_payments').update({due_date:row.due_date,amount:row.amount}).eq('id',exists.id):sb.from('debt_payments').insert(row);const{error}=await q;if(error)return alert('負債資料已更新，但分期表更新失敗：'+errText(error))}const extra=old.filter(p=>Number(p.installment_no)>installments).map(p=>p.id);if(extra.length){const{error}=await sb.from('debt_payments').delete().in('id',extra);if(error)return alert('多餘期數刪除失敗：'+errText(error))}closeModal();await loadAll();renderAll();goPage('debts')}
+async function saveDebtEdit(id){const name=$('#editDebtName').value.trim(),total=Number($('#editDebtTotal').value),installments=Number($('#editDebtInstallments').value),payment=Number($('#editDebtPayment').value),first=$('#editDebtFirst').value;if(!name||!total||!installments||!payment||!first)return alert('請把資料填完整');const old=debtPayments.filter(p=>String(p.debt_id)===String(id)),oldMap=new Map(old.map(p=>[Number(p.installment_no),p])),update={name,source:$('#editDebtSource').value,total_amount:total,installments,payment_amount:payment,note:$('#editDebtNote').value.trim()};const{error:de}=await sb.from('debts').update(update).eq('id',id);if(de)return alert(errText(de));const desired=buildSchedule(id,total,installments,payment,first);for(const row of desired){const exists=oldMap.get(row.installment_no),q=exists?sb.from('debt_payments').update({due_date:row.due_date,amount:row.amount}).eq('id',exists.id):sb.from('debt_payments').insert(row),{error}=await q;if(error)return alert('負債資料已更新，但分期表更新失敗：'+errText(error))}const extra=old.filter(p=>Number(p.installment_no)>installments).map(p=>p.id);if(extra.length){const{error}=await sb.from('debt_payments').delete().in('id',extra);if(error)return alert('多餘期數刪除失敗：'+errText(error))}closeModal();await loadAll();renderAll();goPage('debts')}
 async function deleteDebt(id){if(!confirm('確定要刪除這整筆負債和所有分期嗎？'))return;const{error:pe}=await sb.from('debt_payments').delete().eq('debt_id',id);if(pe)return alert(errText(pe));const{error}=await sb.from('debts').delete().eq('id',id);if(error)return alert(errText(error));closeModal();await loadAll();renderAll();goPage('debts')}
 async function togglePayment(id,checked){const{error}=await sb.from('debt_payments').update({is_paid:checked,paid_at:checked?new Date().toISOString():null}).eq('id',id);if(error)alert(errText(error));else{await loadAll();renderAll();goPage('debts')}}
 
@@ -296,30 +395,53 @@ async function generateRecurringForMonth(m,silent=false){
     if(row.budget_category){const d=budgetDefinitionByName(row.budget_category);if(d){row.budget_definition_id=d.id;try{row.budget_id=await ensureBudgetRow(d.id,m)}catch(e){if(!silent)alert(`固定支出「${r.name}」預算連結失敗：${errText(e)}`);continue}}}
     const{data,error}=await sb.from('transactions').insert(row).select().single();
     if(error){if(!String(error.message||'').toLowerCase().includes('duplicate')&&!silent)alert(`固定支出「${r.name}」產生失敗：${errText(error)}`);continue}
-    transactions.push(data);created++;
+    transactions.push(data);created++
   }
   if(created)await loadAll();
   if(!silent)alert(created?`已產生 ${created} 筆 ${monthLabel(m)}固定支出 ♡`:`${monthLabel(m)}的固定支出都已經存在了。`);
   return created
 }
+
 function recurringModal(){openModal(`<div class="sheet-head"><h3>固定支出管理</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><button class="btn pink" onclick="recurringEditModal()">＋新增固定支出</button><button class="btn secondary" onclick="generateRecurringForMonth('${actualMonth()}',false).then(()=>{renderAll();recurringModal()})">產生本月固定支出</button>${recurringExpenses.map(r=>`<div class="item"><div class="item-main"><div class="item-title">${r.is_active?'🔁':'⏸️'} ${esc(r.name)}</div><div class="item-sub">每月 ${r.day_of_month} 日 ・ $${fmt(r.amount)} ・ ${esc(r.category)}${r.budget_category?' ・ 🎯 '+esc(r.budget_category):''}</div></div><button class="btn secondary small" onclick="recurringEditModal('${r.id}')">編輯</button></div>`).join('')||'<div class="muted center">還沒有固定支出</div>'}</div>`)}
 function recurringEditModal(id){const r=id?recurringExpenses.find(x=>String(x.id)===String(id)):null;openModal(`<div class="sheet-head"><h3>${r?'編輯':'新增'}固定支出</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><div class="label">名稱</div><input id="reName" placeholder="例如：手機費、Netflix" value="${esc(r?.name||'')}"><div class="label">每月金額</div><input id="reAmount" type="number" min="0" step="0.01" value="${r?Number(r.amount):''}"><div class="label">支出分類</div><select id="reCategory">${optionTags(EXPENSE_CATS,r?.category||'生活費')}</select><div class="label">從哪個預算扣</div><select id="reBudget"><option value="">不扣任何預算</option>${activeBudgetDefinitions().map(d=>`<option value="${d.id}" ${(r?.budget_category===d.name)?'selected':''}>${esc(d.name)}</option>`).join('')}</select><div class="label">付款方式</div><select id="rePayment"><option value="">之後再決定</option>${PAYMENT_METHODS.map(p=>`<option ${r?.payment_method===p?'selected':''}>${p}</option>`).join('')}</select><div class="label">誰付款</div><select id="rePaidBy"><option value="">之後再決定</option>${['姐姐','揍揍','共同'].map(p=>`<option ${r?.paid_by===p?'selected':''}>${p}</option>`).join('')}</select><div class="label">每月幾號</div><input id="reDay" type="number" min="1" max="31" value="${r?.day_of_month||1}"><div class="label">備註</div><textarea id="reNote">${esc(r?.note||'')}</textarea><label class="row" style="justify-content:flex-start"><input id="reActive" type="checkbox" style="width:22px;flex:0 0 22px" ${r?.is_active===false?'':'checked'}><span>啟用自動產生</span></label><button class="btn" onclick="saveRecurring('${r?.id||''}')">儲存</button>${r?`<button class="btn danger" onclick="deleteRecurring('${r.id}')">刪除此固定支出</button>`:''}</div>`)}
-async function saveRecurring(id){const name=$('#reName').value.trim(),amount=Number($('#reAmount').value),day=Number($('#reDay').value);if(!name||!amount||day<1||day>31)return alert('請填完整名稱、金額與每月日期');const budgetDef=budgetDefinitionById($('#reBudget').value);const row={household_id:householdId,name,amount,category:$('#reCategory').value,budget_category:budgetDef?.name||null,payment_method:$('#rePayment').value||null,paid_by:$('#rePaidBy').value||null,day_of_month:day,note:$('#reNote').value.trim(),is_active:$('#reActive').checked};const q=id?sb.from('recurring_expenses').update(row).eq('id',id):sb.from('recurring_expenses').insert(row),{error}=await q;if(error)return alert(errText(error));await loadAll();recurringModal()}
+async function saveRecurring(id){const name=$('#reName').value.trim(),amount=Number($('#reAmount').value),day=Number($('#reDay').value);if(!name||!amount||day<1||day>31)return alert('請填完整名稱、金額與每月日期');const budgetDef=budgetDefinitionById($('#reBudget').value),row={household_id:householdId,name,amount,category:$('#reCategory').value,budget_category:budgetDef?.name||null,payment_method:$('#rePayment').value||null,paid_by:$('#rePaidBy').value||null,day_of_month:day,note:$('#reNote').value.trim(),is_active:$('#reActive').checked},q=id?sb.from('recurring_expenses').update(row).eq('id',id):sb.from('recurring_expenses').insert(row),{error}=await q;if(error)return alert(errText(error));await loadAll();recurringModal()}
 async function deleteRecurring(id){if(!confirm('刪除固定支出設定？已經產生的歷史記帳不會刪除。'))return;const{error}=await sb.from('recurring_expenses').delete().eq('id',id);if(error)return alert(errText(error));await loadAll();recurringModal()}
 
 function rangeTx(){const now=new Date();let start,end=new Date(now);end.setHours(23,59,59,999);if(currentStatsRange==='week'){start=new Date(now);start.setDate(now.getDate()-6);start.setHours(0,0,0,0)}if(currentStatsRange==='month'){const[y,m]=currentMonth.split('-').map(Number);start=new Date(y,m-1,1);end=new Date(y,m,0,23,59,59,999)}if(currentStatsRange==='year'){const y=Number(currentMonth.slice(0,4));start=new Date(y,0,1);end=new Date(y,11,31,23,59,59,999)}return transactions.filter(x=>{const d=new Date(x.date+'T12:00:00');return d>=start&&d<=end})}
-function renderStats(){const tx=rangeTx(),exp=tx.filter(isRealExpense),income=sumBy(tx,x=>x.kind==='income'),expense=exp.reduce((s,x)=>s+Number(x.amount),0),saved=sumBy(tx,x=>x.kind==='expense'&&x.category==='存錢'),payments=PAYMENT_METHODS.map(p=>[p,exp.filter(x=>x.payment_method===p).reduce((s,x)=>s+Number(x.amount),0)]),cats=[...new Set(exp.map(x=>x.category))].map(c=>[c,exp.filter(x=>x.category===c).reduce((s,x)=>s+Number(x.amount),0)]).sort((a,b)=>b[1]-a[1]);$('#page-stats').innerHTML=`${monthNav()}<div class="seg"><button class="${currentStatsRange==='week'?'on':''}" onclick="setStats('week')">最近 7 天</button><button class="${currentStatsRange==='month'?'on':''}" onclick="setStats('month')">選定月份</button><button class="${currentStatsRange==='year'?'on':''}" onclick="setStats('year')">${currentMonth.slice(0,4)} 年</button></div><div style="height:12px"></div><div class="grid2"><div class="mini">收入<b class="income">$${fmt(income)}</b></div><div class="mini">實際支出<b class="expense">$${fmt(expense)}</b></div><div class="mini">存錢<b class="saving">$${fmt(saved)}</b></div><div class="mini">差額<b>$${fmt(income-expense)}</b></div></div><div style="height:12px"></div><div class="card"><div class="section-title"><h3>付款方式統計</h3></div><canvas id="payChart"></canvas></div><div class="section-title"><h3>花費分類排行</h3></div><div class="list">${cats.map(([c,v],i)=>`<div class="item rank"><div class="rankno">${i+1}</div><div class="item-main"><div class="item-title">${esc(c)}</div></div><b>$${fmt(v)}</b></div>`).join('')||'<div class="muted center">這段期間沒有支出</div>'}</div><div style="height:12px"></div><div class="section-title"><h3>付款方式明細</h3></div><div class="list">${payments.map(([p,v])=>`<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(p)}</div></div><b>$${fmt(v)}</b></div>`).join('')}</div>`;setTimeout(()=>drawChart(payments),0)}
+
+function renderStats(){
+  const tx=rangeTx(),exp=tx.filter(isRealExpense),income=sumBy(tx,x=>x.kind==='income'),expense=exp.reduce((s,x)=>s+Number(x.amount),0),saved=sumBy(tx,x=>x.kind==='expense'&&x.category==='存錢'),payments=PAYMENT_METHODS.map(p=>[p,exp.filter(x=>x.payment_method===p).reduce((s,x)=>s+Number(x.amount),0)]),cats=[...new Set(exp.map(x=>x.category))].map(c=>[c,exp.filter(x=>x.category===c).reduce((s,x)=>s+Number(x.amount),0)]).sort((a,b)=>b[1]-a[1]);
+  $('#page-stats').innerHTML=`${monthNav()}<div class="seg"><button class="${currentStatsRange==='week'?'on':''}" onclick="setStats('week')">最近 7 天</button><button class="${currentStatsRange==='month'?'on':''}" onclick="setStats('month')">選定月份</button><button class="${currentStatsRange==='year'?'on':''}" onclick="setStats('year')">${currentMonth.slice(0,4)} 年</button></div><div style="height:12px"></div><div class="grid2"><div class="mini">收入<b class="income">$${fmt(income)}</b></div><div class="mini">實際支出<b class="expense">$${fmt(expense)}</b></div><div class="mini">存錢<b class="saving">$${fmt(saved)}</b></div><div class="mini">差額<b>$${fmt(income-expense)}</b></div></div><div style="height:12px"></div><div class="card"><div class="section-title"><h3>付款方式統計</h3></div><canvas id="payChart"></canvas></div><div class="section-title"><h3>花費分類排行</h3></div><div class="list">${cats.map(([c,v],i)=>`<div class="item rank"><div class="rankno">${i+1}</div><div class="item-main"><div class="item-title">${esc(c)}</div></div><b>$${fmt(v)}</b></div>`).join('')||'<div class="muted center">這段期間沒有支出</div>'}</div><div style="height:12px"></div><div class="section-title"><h3>付款方式明細</h3></div><div class="list">${payments.map(([p,v])=>`<div class="item"><span class="dot"></span><div class="item-main"><div class="item-title">${esc(p)}</div></div><b>$${fmt(v)}</b></div>`).join('')}</div>`;
+  setTimeout(()=>drawChart(payments),0)
+}
 function setStats(r){currentStatsRange=r;renderStats()}
 function drawChart(arr){const el=$('#payChart');if(!el)return;if(chart)chart.destroy();chart=new Chart(el,{type:'bar',data:{labels:arr.map(x=>x[0].replace('揍揍（','').replace('）','').replace('姐姐的','姐-')),datasets:[{data:arr.map(x=>x[1]),borderWidth:1}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{ticks:{maxRotation:65,minRotation:45,font:{size:10}}}}}})}
 
 function csvCell(v){const s=String(v??'');return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s}
-function exportCSV(){const rows=[['資料類型','日期/月','名稱/分類','扣款預算','連動資產','信用卡','金額','付款方式/來源','誰付款','備註','狀態']];transactions.forEach(x=>rows.push(['記帳',x.date,x.category,x.kind==='expense'?budgetCategoryForTx(x)||'':'',x.asset_id?assetName(x.asset_id):'',x.credit_card_id?cardName(x.credit_card_id):'',x.amount,x.payment_method||'',x.paid_by||'',x.note||'',x.kind]));budgetDefinitions.forEach(x=>rows.push(['預算規則','',x.name,(x.expense_categories||[]).join('、'),'','',0,'','','',x.is_active===false?'停用':'啟用']));budgets.forEach(x=>rows.push(['預算',x.month,x.category,'','','',x.amount,'','','','']));assets.forEach(x=>rows.push(['資產','',x.name,'','','',x.balance,'','',x.note||'','']));debts.forEach(x=>rows.push(['負債','',x.name,'','','',x.total_amount,x.source||'','',x.note||'',`${x.installments||''}期`]));creditCards.forEach(x=>rows.push(['信用卡設定','',x.name,'','','',0,`結帳${x.closing_day}/繳款${x.payment_day}`,x.owner_name||'','','']));recurringExpenses.forEach(x=>rows.push(['固定支出','',x.name,x.budget_category||'','','',x.amount,x.payment_method||'',x.paid_by||'',x.note||'',x.is_active?'啟用':'停用']));debtPayments.forEach(x=>{const d=debts.find(d=>String(d.id)===String(x.debt_id));rows.push(['分期',x.due_date,d?.name||'負債','','','',x.amount,d?.source||'','','',x.is_paid?'已繳':'未繳'])});const csv='\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`姐姐揍揍小帳本-${today()}.csv`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
+function exportCSV(){
+  const rows=[['資料類型','日期/月','名稱/分類','扣款預算','連動資產','信用卡','金額','付款方式/來源','誰付款','備註','狀態']];
+  transactions.forEach(x=>rows.push(['記帳',x.date,x.category,x.kind==='expense'?budgetCategoryForTx(x)||'':'',x.asset_id?assetName(x.asset_id):'',x.credit_card_id?cardName(x.credit_card_id):'',x.amount,x.payment_method||'',x.paid_by||'',x.note||'',x.kind]));
+  budgetDefinitions.forEach(x=>rows.push(['預算規則','',x.name,(x.expense_categories||[]).join('、'),'','',0,'','','',x.is_active===false?'停用':'啟用']));
+  budgets.forEach(x=>rows.push(['預算',x.month,x.category,'','','',x.amount,'','','','']));
+  assets.forEach(x=>rows.push(['資產','',x.name,'','','',x.balance,'','',x.note||'','']));
+  debts.forEach(x=>rows.push(['負債','',x.name,'','','',x.total_amount,x.source||'','',x.note||'',`${x.installments||''}期`]));
+  creditCards.forEach(x=>rows.push(['信用卡設定','',x.name,'','','',0,`結帳${x.closing_day}/繳款${x.payment_day}`,x.owner_name||'','','']));
+  recurringExpenses.forEach(x=>rows.push(['固定支出','',x.name,x.budget_category||'','','',x.amount,x.payment_method||'',x.paid_by||'',x.note||'',x.is_active?'啟用':'停用']));
+  debtPayments.forEach(x=>{const d=debts.find(d=>String(d.id)===String(x.debt_id));rows.push(['分期',x.due_date,d?.name||'負債','','','',x.amount,d?.source||'','','',x.is_paid?'已繳':'未繳'])});
+  const csv='\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`姐姐揍揍小帳本-${today()}.csv`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)
+}
 
 function settingsModal(){openModal(`<div class="sheet-head"><h3>設定</h3><button class="x" onclick="closeModal()">×</button></div><div class="stack"><div class="card" style="margin:0"><div class="label">目前登入</div><div style="font-weight:800;margin-top:6px">${esc(profile?.display_name||'')}</div><div class="muted">${esc(session?.user?.email||'')}</div></div><div class="card" style="margin:0"><div class="label">共同帳本</div><div style="font-weight:800;margin-top:6px">${esc(household?.name||'姐姐＆揍揍')}</div><div class="muted">資料會同步到加入同一共同帳本的帳號。</div></div><button class="btn secondary" onclick="creditCardsModal()">💳 信用卡管理</button><button class="btn secondary" onclick="recurringModal()">🔁 固定支出管理</button><button class="btn secondary" onclick="goCurrentMonth();closeModal()">回到現在月份</button><button class="btn secondary" onclick="exportCSV()">匯出 CSV 備份</button><button class="btn danger" onclick="signOut()">登出這支裝置</button></div>`)}
+
 function goPage(p){currentPage=p;document.querySelectorAll('[id^=page-]').forEach(x=>x.classList.add('hidden'));$('#page-'+p).classList.remove('hidden');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page===p))}
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.page)));
 
-if(SUPABASE_URL.includes('PASTE_')||SUPABASE_KEY.includes('PASTE_')){show('loginView');notice('網站程式已放好，但還需要把 Supabase URL 與 Publishable key 填進 index.html 才能登入。')}else{bootstrap()}
+if(SUPABASE_URL.includes('PASTE_')||SUPABASE_KEY.includes('PASTE_')){
+  show('loginView');
+  notice('網站程式已放好，但還需要把 Supabase URL 與 Publishable key 填進 index.html 才能登入。')
+}else{
+  bootstrap()
+}
 </script>
 </body>
 </html>
